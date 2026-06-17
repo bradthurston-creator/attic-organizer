@@ -447,7 +447,12 @@ const clearDebugBtn = $('clearDebugBtn');
 let debugVisible = false;
 const debugLines = [];
 const MAX_DEBUG_LINES = 30;
-debugCard.style.display = 'none';
+// Show debug card on startup for diagnostics
+setTimeout(() => {
+  debugCard.style.display = 'block';
+  debugVisible = true;
+  appendDebugLine('🔍 Debug mode: ON');
+}, 500);
 
 function appendDebugLine(line) {
   const stamped = `[${new Date().toLocaleTimeString()}] ${line}`;
@@ -464,6 +469,23 @@ clearDebugBtn?.addEventListener('click', () => {
 });
 
 appendDebugLine('📄 App loaded, ready.');
+
+// Diagnostic: check NFC plugin loading
+const nfcTest = getNfcPlugin();
+appendDebugLine(`🔌 CapacitorNfc plugin: ${nfcTest ? 'FOUND' : 'NULL'}`);
+if (nfcTest) {
+  const keys = Object.keys(nfcTest).join(', ');
+  appendDebugLine(`   methods: ${keys}`);
+  // Check plugin version
+  if (nfcTest.getPluginVersion) {
+    nfcTest.getPluginVersion().then(v => appendDebugLine(`   pluginVersion: ${v.version || v}`)).catch(() => {});
+  }
+  // Check NFC status
+  if (nfcTest.getStatus) {
+    nfcTest.getStatus().then(s => appendDebugLine(`   NFC status: ${JSON.stringify(s)}`)).catch(() => {});
+  }
+}
+
 appendDebugLine(`🌐 hasNativeNfc: ${hasNativeNfc()}`);
 appendDebugLine(`🌐 hasWebNfc: ${nfcInBrowser}`);
 appendDebugLine(`🌐 hasCapacitorSpeech: ${hasCapacitorSpeech()}`);
@@ -769,8 +791,10 @@ async function writeToTag() {
       };
 
       listenerHandles.push(await nfc.addListener('tagDiscovered', handleTag));
+      appendDebugLine('   listener registered, calling startScanning...');
 
-      await nfc.startScanning({ invalidateAfterFirstRead: true, androidReaderModeFlags: 15 });
+      await nfc.startScanning({ invalidateAfterFirstRead: true, androidReaderModeFlags: 2319 });
+      appendDebugLine('   startScanning resolved, waiting for tag...');
     } else if (hasNfcSupport()) {
       appendDebugLine('🌐 Web NFC write');
       const ndef = new NDEFReader();
@@ -879,7 +903,7 @@ async function startReading() {
         setTimeout(() => nfc.stopScanning(), 500);
       }
 
-      await nfc.startScanning({ invalidateAfterFirstRead: true, androidReaderModeFlags: 15 });
+      await nfc.startScanning({ invalidateAfterFirstRead: true, androidReaderModeFlags: 2319 });
     } else {
               const ndef = new NDEFReader();
               await ndef.scan();
@@ -1080,7 +1104,7 @@ async function updateTag() {
       };
 
       listenerHandles.push(await nfc.addListener('tagDiscovered', handleTag));
-      await nfc.startScanning({ invalidateAfterFirstRead: true, androidReaderModeFlags: 15 });
+      await nfc.startScanning({ invalidateAfterFirstRead: true, androidReaderModeFlags: 2319 });
     } else if (hasNfcSupport()) {
       const ndef = new NDEFReader();
       await ndef.write({ records: [{ recordType: "text", data: content }] });
