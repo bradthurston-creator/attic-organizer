@@ -1026,10 +1026,13 @@ function renderScannedItems(container) {
 // === UPDATE TAG (write edited contents back) ===
 async function updateTag() {
   if (isUpdatingTag) return;
-  if (!scannedBoxName) {
-    showToast('Read a tag first');
-    return;
-  }
+  // Snapshot current values so stray read listeners can't overwrite them
+  const snapName = scannedBoxName;
+  const snapLoc = scannedBoxLocation;
+  const snapDate = scannedBoxDate;
+  const snapItems = [...scannedItems];
+  if (!snapName) { showToast('Read a tag first'); return; }
+
   isUpdatingTag = true;
   updateResult.style.display = 'block';
   updateResult.className = 'status-bar';
@@ -1037,7 +1040,7 @@ async function updateTag() {
   updateTagBtn.disabled = true;
   updateTagBtn.textContent = '⏳ Updating...';
 
-  const content = buildTagData(scannedBoxName, scannedBoxLocation, scannedBoxDate, scannedItems);
+  const content = buildTagData(snapName, snapLoc, snapDate, snapItems);
 
   try {
     const nfcPlugin = getNfcPlugin();
