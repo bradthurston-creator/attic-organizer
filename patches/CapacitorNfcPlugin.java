@@ -287,6 +287,195 @@ public class CapacitorNfcPlugin extends Plugin {
         call.resolve(result);
     }
 
+        private void performWrite(PluginCall call, Tag tag, NdefMessage message, boolean allowFormat) {
+        executor.execute(() -> {
+            // Try MIFARE Ultralight raw write (NTAG215) — erase + rewrite
+            // Only use MIFARE path when Ndef tech is NOT available
+            boolean hasMifare = Arrays.asList(tag.getTechList()).contains("android.nfc.tech.MifareUltralight");
+            boolean hasNdef = Arrays.asList(tag.getTechList()).contains("android.nfc.tech.Ndef");
+
+            if (hasMifare && !hasNdef) {
+                try {
+                    MifareUltralight mifare = MifareUltralight.get(tag);
+                    if (mifare != null) {
+                        mifare.connect();
+                        // Erase old NDEF data pages first
+                        byte[] empty = new byte[4];
+                        for (int p = 4; p < 16; p++) {
+                            try { mifare.writePage(p, empty); } catch (IOException ignored) {}
+                        }
+                        // Build TLV: Type 0x03, length, data, terminator 0xFE
+                        byte[] ndefBytes = message.toByteArray();
+                        int ndefLen = ndefBytes.length;
+                        byte[] tlv;
+                        if (ndefLen < 255) {
+                            tlv = new byte[2 + ndefLen];
+                            tlv[0] = 0x03;
+                            tlv[1] = (byte) ndefLen;
+                            System.arraycopy(ndefBytes, 0, tlv, 2, ndefLen);
+                        } else {
+                            tlv = new byte[4 + ndefLen];
+                            tlv[0] = 0x03;
+                            tlv[1] = (byte) 0xFF;
+                            tlv[2] = (byte) (ndefLen >> 8);
+                            tlv[3] = (byte) ndefLen;
+                            System.arraycopy(ndefBytes, 0, tlv, 4, ndefLen);
+                        }
+                        byte[] full = new byte[tlv.length + 1];
+                        System.arraycopy(tlv, 0, full, 0, tlv.length);
+                        full[tlv.length] = (byte) 0xFE;
+                        // Write capability container at page 3
+                        byte[] cc = new byte[4];
+                        cc[0] = (byte) 0xE1;  // NDEF magic number
+                        cc[1] = (byte) 0x10;  // version 1.0
+                        cc[2] = (byte) 0x3C;  // 60 bytes available
+                        cc[3] = (byte) 0x00;  // read/write
+                        mifare.writePage(3, cc);
+                        // Write TLV data starting at page 4
+                        writeMifarePages(mifare, full, 4);
+                        mifare.close();
+                        call.resolve();
+                        return;
+                    }
+                } catch (IOException e) {
+                    Log.w(TAG, "MIFARE write failed, trying Ndef fallback", e);
+                }
+            }
+
+            // Ndef path (also used when MIFARE fails or Ndef tech is available)
+            Ndef ndef = Ndef.get(tag);Ndef ndef = Ndef.get(tag);
+            if (ndef == null) {
+                call.reject("Tag does not support NDEF.");
+                return;
+            }
+
+            try {
+                ndef.connect();
+                boolean success = ndef.makeReadOnly();
+                ndef.close();
+                if (success) {
+                    call.resolve();
+                } else {
+                    call.reject("Failed to make the tag read only.");
+                }
+            } catch (IOException e) {
+                call.reject("Failed to make the tag read only.", e);
+            }
+        });
+    }
+
+    @PluginMethod
+    public void share(PluginCall call) {
+        if (!ensureAdapterAvailable(call)) {
+            return;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            call.reject("Peer-to-peer NFC sharing is not supported on Android 10 or later.");
+            return;
+        }
+
+        JSArray records = call.getArray("records");
+        if (records == null) {
+            call.reject("records is required");
+            return;
+        }
+
+        try {
+            NdefMessage message = NfcJsonConverter.jsonArrayToMessage(records);
+            Activity activity = getActivity();
+            if (activity == null) {
+                call.reject("Unable to access activity context.");
+                return;
+            }
+
+            activity.runOnUiThread(() -> {
+                try {
+                    if (!isNdefPushEnabled(adapter)) {
+                        call.reject("NDEF push is disabled on this device.");
+                        return;
+                    }
+                    setNdefPushMessage(adapter, message, activity);
+                    sharedMessage = message;
+                    call.resolve();
+                } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ex) {
+                    Log.w(TAG, "NDEF push API unavailable on this device", ex);
+                    call.reject("NDEF push is not available on this device.");
+                }
+            });
+        } catch (JSONException e) {
+            call.reject("Invalid NDEF records payload", e);
+        }
+    }
+
+    @PluginMethod
+    public void unshare(PluginCall call) {
+        if (!ensureAdapterAvailable(call)) {
+            return;
+        }
+
+        Activity activity = getActivity();
+        if (activity == null) {
+            call.reject("Unable to access activity context.");
+            return;
+        }
+
+        activity.runOnUiThread(() -> {
+            try {
+                setNdefPushMessage(adapter, null, activity);
+                sharedMessage = null;
+                call.resolve();
+            } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ex) {
+                Log.w(TAG, "NDEF push API unavailable on this device", ex);
+                call.reject("Unable to clear shared message on this device.");
+            }
+        });
+    }
+
+    @PluginMethod
+    public void getStatus(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("status", getNfcStatus());
+        call.resolve(result);
+    }
+
+    @PluginMethod
+    public void showSettings(PluginCall call) {
+        Activity activity = getActivity();
+        if (activity == null) {
+            call.reject("Unable to open settings without an activity context.");
+            return;
+        }
+
+        Intent intent = new Intent(Settings.ACTION_NFC_SETTINGS);
+        try {
+            activity.startActivity(intent);
+        } catch (ActivityNotFoundException ex) {
+            Intent fallback = new Intent(Settings.ACTION_WIRELESS_SETTINGS);
+            try {
+                activity.startActivity(fallback);
+            } catch (ActivityNotFoundException secondary) {
+                call.reject("Unable to open NFC settings on this device.");
+                return;
+            }
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void getPluginVersion(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("version", pluginVersion);
+        call.resolve(result);
+    }
+
+    @PluginMethod
+    public void isSupported(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("supported", adapter != null);
+        call.resolve(result);
+    }
+
     private void performWrite(PluginCall call, Tag tag, NdefMessage message, boolean allowFormat) {
         executor.execute(() -> {
             // Try MIFARE Ultralight FIRST (NTAG215 uses this tech, not Ndef/NdefFormatable)
