@@ -696,7 +696,7 @@ validateWriteForm();
 async function writeToTag() {
   if (isWriteScanning) return;
   isWriteScanning = true;
-  if (!boxName.value.trim()) return;
+  if (!boxName.value.trim() || !boxLocation.value.trim()) { isWriteScanning = false; return; }
 
   writeBtn.disabled = true;
   writeBtn.textContent = '⏳ Hold near tag...';
@@ -727,6 +727,7 @@ async function writeToTag() {
       const listenerHandles = [];
 
       const handleTag = async (event) => {
+        if (!isWriteScanning) return;
         appendDebugLine('📡 tag discovered');
         const tag = event?.tag;
         appendDebugLine(`   techTypes: ${JSON.stringify(tag?.techTypes || [])}`);
@@ -1059,6 +1060,7 @@ async function updateTag() {
 
       const listenerHandles = [];
       const handleTag = async (event) => {
+        if (!isUpdatingTag) return;
         const tag = event?.tag;
         try {
           const messagePayload = Array.from(payload);
