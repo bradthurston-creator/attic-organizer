@@ -757,11 +757,6 @@ async function writeToTag() {
         const tag = event?.tag;
         appendDebugLine(`   techTypes: ${JSON.stringify(tag?.techTypes || [])}`);
         try {
-          if (!tag || !tag.techTypes || !tag.techTypes.includes('android.nfc.tech.Ndef')) {
-            if (tag?.techTypes?.includes('android.nfc.tech.NdefFormatable')) {
-              try { await nfc.erase(); } catch (e) { throw new Error('Could not format tag.'); }
-            }
-          }
           const messagePayload = Array.from(payload);
           appendDebugLine(`   writing ${messagePayload.length} bytes`);
           await nfc.write({
@@ -795,7 +790,8 @@ async function writeToTag() {
       };
 
       listenerHandles.push(await nfc.addListener('tagDiscovered', handleTag));
-      appendDebugLine('   listener registered, calling startScanning...');
+      listenerHandles.push(await nfc.addListener('ndefDiscovered', handleTag));
+      appendDebugLine('   listeners (tag + ndef) registered, calling startScanning...');
 
       await nfc.startScanning({ androidReaderModeFlags: 15 });
       appendDebugLine('   startScanning resolved, waiting for tag...');
@@ -1108,6 +1104,7 @@ async function updateTag() {
       };
 
       listenerHandles.push(await nfc.addListener('tagDiscovered', handleTag));
+      listenerHandles.push(await nfc.addListener('ndefDiscovered', handleTag));
       await nfc.startScanning({ invalidateAfterFirstRead: true, androidReaderModeFlags: 15 });
     } else if (hasNfcSupport()) {
       const ndef = new NDEFReader();
