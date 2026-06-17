@@ -134,6 +134,13 @@ body{
 .history-item .hi-name{font-weight:500;font-size:15px;color:#1e1e24;}
 .history-item .hi-date{font-size:12px;color:#6b5e52;margin-top:2px;}
 .history-item .hi-tag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:6px;background:#e0dbd6;color:#6b5e52;margin-top:4px;}
+.history-item .hi-del{
+  width:36px;height:36px;border-radius:50%;border:none;
+  background:#f0edea;color:#c0392b;font-size:16px;
+  cursor:pointer;transition:all 0.2s;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.history-item .hi-del:hover{background:#f8d7da;transform:scale(1.1);}
 .history-empty{text-align:center;padding:40px 0;color:#6b5e52;}
 .history-empty .he-icon{font-size:48px;display:block;margin-bottom:12px;}
 
@@ -237,7 +244,7 @@ body{
     <div class="card">
       <h2>Your Boxes</h2>
       <div class="input-group" style="margin-bottom:12px">
-        <input type="text" id="historySearch" placeholder="Search boxes..." autocomplete="off">
+        <input type="text" id="historySearch" placeholder="Search boxes by name..." autocomplete="off">
       </div>
       <div id="historyList">
         <div class="history-empty">
@@ -915,8 +922,10 @@ function addToHistory(name, date) {
 
 function renderHistory() {
   const q = historySearch.value.toLowerCase().trim();
-  const filtered = q ? history.filter(h => h.name.toLowerCase().includes(q)) : history;
-  
+  const filtered = q ? history.filter(h =>
+    h.name.toLowerCase().includes(q)
+  ) : history;
+
   if (filtered.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'history-empty';
@@ -930,7 +939,7 @@ function renderHistory() {
     historyList.appendChild(empty);
     return;
   }
-  
+
   const fragment = document.createDocumentFragment();
   filtered.forEach(h => {
     const item = document.createElement('div');
@@ -955,11 +964,32 @@ function renderHistory() {
     content.appendChild(dateEl);
     content.appendChild(tagEl);
     item.appendChild(content);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'hi-del';
+    delBtn.textContent = '✕';
+    delBtn.title = 'Remove this box';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm(`Remove "${h.name}" from history?`)) {
+        deleteHistoryItem(h.id);
+      }
+    });
+    item.appendChild(delBtn);
+
     fragment.appendChild(item);
   });
 
   historyList.innerHTML = '';
   historyList.appendChild(fragment);
+}
+
+function deleteHistoryItem(id) {
+  history = history.filter(h => h.id !== id);
+  localStorage.setItem('atticOrganizerHistory', JSON.stringify(history));
+  renderHistory();
+  renderRecentBoxes();
+  showToast('🗑️ Box removed');
 }
 
 historySearch.addEventListener('input', renderHistory);
