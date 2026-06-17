@@ -1,0 +1,22 @@
+{
+  "name": "Attic Organizer",
+  "short_name": "AtticOrg",
+  "description": "Tap your box. Know your stuff.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0edea",
+  "theme_color": "#3a506b",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
