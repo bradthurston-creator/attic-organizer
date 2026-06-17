@@ -1306,6 +1306,9 @@ function showToast(msg) {
 
 
 // === SEARCH ===
+var searchTimer;
+var searchResultsData = [];
+
 function runSearch() {
   if (!$('searchInput')) return;
   var q = $('searchInput').value.toLowerCase().trim();
@@ -1315,20 +1318,22 @@ function runSearch() {
     return;
   }
 
-  var matches = history.filter(function(h) {
+  searchResultsData = history.filter(function(h) {
     var name = (h.name || '').toLowerCase();
     var loc = (h.location || '').toLowerCase();
     var items = (h.items || []).join(' ').toLowerCase();
     return name.indexOf(q) >= 0 || loc.indexOf(q) >= 0 || items.indexOf(q) >= 0;
   });
 
-  if (matches.length === 0) {
+  if (searchResultsData.length === 0) {
     results.innerHTML = '<div class="history-empty"><span class="he-icon">🔍</span>No boxes match "' + escapeHtml($('searchInput').value) + '".</div>';
+    searchResultsData = [];
     return;
   }
 
-  results.innerHTML = matches.map(function(h) {
-    return '<div class="history-item" onclick="goToBox(\'' + escapeHtml(h.name) + '\')">' +
+  results.innerHTML = '<div style="font-size:13px;color:#6b5e52;margin-bottom:8px;">' + searchResultsData.length + ' box' + (searchResultsData.length !== 1 ? 'es' : '') + ' match</div>' +
+  searchResultsData.map(function(h, idx) {
+    return '<div class="history-item" style="cursor:pointer;" onclick="showSearchDetail(' + idx + ')">' +
       '<div class="hi-content">' +
       '<div class="hi-name">' + escapeHtml(h.name) + '</div>' +
       '<div class="hi-date">📅 ' + escapeHtml(h.date) + (h.location ? ' · 📍 ' + escapeHtml(h.location) : '') + '</div>' +
@@ -1337,29 +1342,36 @@ function runSearch() {
   }).join('');
 }
 
-var searchTimer;
+function showSearchDetail(idx) {
+  var h = searchResultsData[idx];
+  if (!h) return;
+  var results = $('searchResults');
+  results.innerHTML =
+    '<div style="margin-bottom:12px;">' +
+      '<button class="btn btn-sm btn-outline" onclick="runSearch()">← Back to results</button>' +
+    '</div>' +
+    '<div class="card" style="margin-bottom:0;">' +
+      '<div class="read-header">📦 ' + escapeHtml(h.name) + '</div>' +
+      (h.location ? '<div style="font-size:14px;color:#6b5e52;margin-bottom:4px;">📍 ' + escapeHtml(h.location) + '</div>' : '') +
+      '<div class="read-date">📅 ' + escapeHtml(h.date) + '</div>' +
+      ((h.items || []).length > 0 ?
+        '<div style="margin-top:12px;border-top:1px solid #eee;padding-top:12px;">' +
+          '<div style="font-size:14px;font-weight:600;color:#3a506b;margin-bottom:8px;">Contents</div>' +
+          h.items.map(function(item) {
+            return '<div class="read-item"><span class="ri-text">📝 ' + escapeHtml(item) + '</span></div>';
+          }).join('') +
+        '</div>'
+      : '<div style="margin-top:12px;color:#9a8e82;font-size:13px;">No items listed</div>') +
+    '</div>';
+    
+  // Scroll to top of results
+  results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 $('searchInput').addEventListener('input', function() {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(runSearch, 200);
 });
-
-function goToBox(name) {
-  var found = null;
-  for (var i = 0; i < history.length; i++) {
-    if (history[i].name === name) { found = history[i]; break; }
-  }
-  if (!found) return;
-  scannedBoxName = found.name;
-  scannedBoxLocation = found.location || '';
-  scannedBoxDate = found.date;
-  scannedItems = found.items || [];
-  // Switch to read tab
-  tabs.forEach(function(t) { t.classList.remove('active'); });
-  document.querySelector('[data-tab="read"]').classList.add('active');
-  document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
-  $('panel-read').classList.add('active');
-  $('readBtn').click();
-}
 
 // === INIT ===
 renderRecentBoxes();
