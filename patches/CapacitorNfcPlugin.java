@@ -294,7 +294,7 @@ public class CapacitorNfcPlugin extends Plugin {
             boolean hasMifare = Arrays.asList(tag.getTechList()).contains("android.nfc.tech.MifareUltralight");
             boolean hasNdef = Arrays.asList(tag.getTechList()).contains("android.nfc.tech.Ndef");
 
-            if (hasMifare && !hasNdef) {
+            if (hasMifare) {  // Always use MIFARE raw write for NTAG215
                 try {
                     MifareUltralight mifare = MifareUltralight.get(tag);
                     if (mifare != null) {
