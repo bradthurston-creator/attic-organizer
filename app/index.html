@@ -628,64 +628,6 @@ voiceItemsBtn.addEventListener('click', () => {
     showToast(`+${newItems.length} item${newItems.length > 1 ? 's' : ''} added`);
   });
 });
-  const today = new Date();
-  let dateStr = boxDate.value;
-  const datePatterns = [
-    { re: /(today|tonight)/i, offset: 0 },
-    { re: /(yesterday)/i, offset: -1 },
-    { re: /(tomorrow)/i, offset: 1 },
-    { re: /(last\s+night)/i, offset: -1 },
-  ];
-  for (const dp of datePatterns) {
-    if (dp.re.test(text)) {
-      const d = new Date(today);
-      d.setDate(d.getDate() + dp.offset);
-      dateStr = d.toISOString().split('T')[0];
-      break;
-    }
-  }
-  const dateMatch = text.match(/(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?/);
-  if (!dateMatch) {
-    const monthNames = ['january','february','march','april','may','june','july','august','september','october','november','december'];
-    const namedDate = text.toLowerCase().match(/(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s*(\d{4})?/i);
-    if (namedDate) {
-      const month = monthNames.indexOf(namedDate[1].toLowerCase());
-      const day = parseInt(namedDate[2]);
-      const year = namedDate[3] ? parseInt(namedDate[3]) : today.getFullYear();
-      const d = new Date(year, month, day);
-      if (!isNaN(d.getTime())) dateStr = d.toISOString().split('T')[0];
-    }
-  }
-  let clean = text
-    .replace(/(today|tonight|yesterday|tomorrow|last\s+night)/gi, '')
-    .replace(/(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?,?\s*\d{0,4}/gi, '')
-    .replace(/\d{1,2}[\/-]\d{1,2}(?:[\/-]\d{2,4})?/g, '')
-    .replace(/^(made|put|boxed|stored|packed|sorted|saved)\s+/i, '')
-    .replace(/\s+/g, ' ').trim();
-  
-  // Split into items on commas, periods, semicolons
-  const parts = clean.split(/[,;.]+/).map(p => p.trim()).filter(p => p);
-  
-  const alreadyHasName = boxName.value.trim().length > 0;
-
-  if (alreadyHasName) {
-    // Box name is already set — only add items, don't touch the name
-    const newItems = parts.map(p => p.charAt(0).toUpperCase() + p.slice(1));
-    writeItemList.push(...newItems);
-  } else if (parts.length > 1) {
-    // No name yet — first part becomes the name, rest are items
-    boxName.value = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
-    writeItemList = parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1));
-  } else {
-    // Single thing said — set as box name
-    boxName.value = clean.charAt(0).toUpperCase() + clean.slice(1);
-  }
-  
-  boxName.dispatchEvent(new Event('input'));
-  boxDate.value = dateStr;
-  renderWriteItems();
-  validateWriteForm();
-}
 
 // === VALIDATE WRITE FORM ===
 function validateWriteForm() {
