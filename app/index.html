@@ -207,7 +207,7 @@ body{
   <div class="tabs" role="tablist">
     <button class="tab active" data-tab="write" role="tab">✏️ Write</button>
     <button class="tab" data-tab="read" role="tab">📖 Read</button>
-    <button class="tab" data-tab="history" role="tab">📋 History</button>
+    <button class="tab" data-tab="history" role="tab">📋 Inventory</button>
   </div>
 
   <!-- WRITE PANEL -->
@@ -286,9 +286,24 @@ body{
     <div class="card" id="lastScannedCard" style="display:none">
       <div id="lastScannedHeader" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <h2 style="margin:0;">Box Contents</h2>
-        <button class="btn btn-sm btn-secondary" id="readEditNameBtn">✏️ Rename</button>
+        <button class="btn btn-sm btn-secondary" id="readEditBtn">✏️ Edit</button>
       </div>
       <div id="lastScannedContent"></div>
+      <!-- Edit inline -->
+      <div id="readEditFields" style="display:none;margin-top:12px;">
+        <div class="input-group">
+          <label>📍 Location</label>
+          <input type="text" id="readEditLocation" maxlength="80" placeholder="Location">
+        </div>
+        <div class="input-group">
+          <label>📦 Box name</label>
+          <input type="text" id="readEditName" maxlength="120" placeholder="Box name">
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm btn-success" id="readEditSaveBtn" style="flex:1;">✅ Save</button>
+          <button class="btn btn-sm btn-secondary" id="readEditCancelBtn">Cancel</button>
+        </div>
+      </div>
       <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
         <button class="btn btn-sm btn-primary" id="updateTagBtn" style="flex:1;">📱 Update Tag</button>
         <button class="btn btn-sm btn-secondary" id="readNewScanBtn">📖 Scan Another</button>
@@ -300,9 +315,12 @@ body{
   <!-- HISTORY PANEL -->
   <div class="panel" id="panel-history">
     <div class="card">
-      <h2>Your Boxes</h2>
+      <h2>Inventory</h2>
       <div class="input-group" style="margin-bottom:12px">
-        <input type="text" id="historySearch" placeholder="Search boxes by name..." autocomplete="off">
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="historySearch" placeholder="Search boxes by name..." autocomplete="off" style="flex:1;">
+          <button class="voice-btn-sm" id="voiceSearchBtn" title="Speak to search">🎤</button>
+        </div>
       </div>
       <div id="historyList">
         <div class="history-empty">
@@ -416,6 +434,7 @@ const updateTagBtn = $('updateTagBtn');
 const updateResult = $('updateResult');
 const readNewScanBtn = $('readNewScanBtn');
 const readEditNameBtn = $('readEditNameBtn');
+const editBtnRef = $('readEditBtn') || null;
 const historyList = $('historyList');
 const historySearch = $('historySearch');
 const recentBoxesCard = $('recentBoxesCard');
@@ -575,12 +594,37 @@ async function handleCapacitorSpeech(onResult) {
     const granted = await ensureSpeechPermission();
     if (!granted) { voiceStatus.textContent = '❌ Mic permission denied'; voiceStatus.className = 'status-bar error'; return; }
     cleanupSpeech();
+    // Collect partial results but don't stop — wait for final
+    let lastTranscript = '';
     speechListenerHandles.push(await speechPlugin.addListener('partialResults', event => {
       const transcript = event.matches && event.matches[0];
-      if (transcript) { voiceStatus.textContent = '✅ Got it!'; voiceStatus.className = 'status-bar success'; onResult(transcript); stopListening(); }
+      if (transcript && transcript.length > lastTranscript.length) {
+        lastTranscript = transcript;
+      }
     }));
     speechListenerHandles.push(await speechPlugin.addListener('error', () => { stopListening(); }));
-    speechListenerHandles.push(await speechPlugin.addListener('readyForNextSession', () => { stopListening(); }));
+    speechListenerHandles.push(await speechPlugin.addListener('readyForNextSession', () => {
+      // Use the best transcript we collected
+      if (lastTranscript) {
+        voiceStatus.textContent = '✅ Got it!';
+        voiceStatus.className = 'status-bar success';
+        // Find which mic is active and call its handler
+        const activeHandlers = {
+          voiceLocBtn: (t) => { boxLocation.value = t.charAt(0).toUpperCase() + t.slice(1); validateWriteForm(); },
+          voiceNameBtn: (t) => { boxName.value = t.charAt(0).toUpperCase() + t.slice(1); boxName.dispatchEvent(new Event('input')); validateWriteForm(); },
+          voiceItemsBtn: (t) => {
+            const parts = t.split(/[,;.]+/).map(p => p.trim()).filter(p => p);
+            writeItemList.push(...parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)));
+            renderWriteItems(); validateWriteForm();
+            showToast(`+${parts.length} item${parts.length > 1 ? 's' : ''} added`);
+          }
+        };
+        if (activeMicBtn && activeHandlers[activeMicBtn.id]) {
+          activeHandlers[activeMicBtn.id](lastTranscript);
+        }
+      }
+      stopListening();
+    }));
     await speechPlugin.start({ language: 'en-US', partialResults: true, popup: false, addPunctuation: true, maxResults: 3, allowForSilence: 3000 });
     isListening = true;
   } catch (err) {
@@ -626,6 +670,15 @@ voiceItemsBtn.addEventListener('click', () => {
     renderWriteItems();
     validateWriteForm();
     showToast(`+${newItems.length} item${newItems.length > 1 ? 's' : ''} added`);
+  });
+});
+
+// Voice search in inventory
+const voiceSearchBtn = $('voiceSearchBtn');
+voiceSearchBtn.addEventListener('click', () => {
+  startListening(voiceSearchBtn, (transcript) => {
+    historySearch.value = transcript;
+    renderHistory();
   });
 });
 
@@ -1056,6 +1109,40 @@ readNewScanBtn.addEventListener('click', () => {
   readIcon.textContent = '📱';
   readIcon.className = 'nfc-icon';
   readLabel.textContent = 'Tap your phone to an Attic Organizer sticker';
+});
+
+// === READ TAB EDIT ===
+const readEditBtn = $('readEditBtn');
+const readEditFields = $('readEditFields');
+const readEditName = $('readEditName');
+const readEditLocation = $('readEditLocation');
+const readEditSaveBtn = $('readEditSaveBtn');
+const readEditCancelBtn = $('readEditCancelBtn');
+
+readEditBtn.addEventListener('click', () => {
+  readEditName.value = scannedBoxName;
+  readEditLocation.value = scannedBoxLocation;
+  readEditFields.style.display = 'block';
+  readEditBtn.style.display = 'none';
+});
+
+readEditCancelBtn.addEventListener('click', () => {
+  readEditFields.style.display = 'none';
+  readEditBtn.style.display = 'block';
+});
+
+readEditSaveBtn.addEventListener('click', () => {
+  const newName = readEditName.value.trim();
+  const newLoc = readEditLocation.value.trim();
+  if (!newName) { showToast('Box name is required'); return; }
+  scannedBoxName = newName;
+  scannedBoxLocation = newLoc;
+  // Re-render display
+  displayScannedBox(scannedBoxName, scannedBoxLocation, scannedBoxDate, scannedItems);
+  readEditFields.style.display = 'none';
+  readEditBtn.style.display = 'block';
+  updateTagBtn.style.display = 'block';
+  showToast('Edited. Tap "Update Tag" to save.');
 });
 
 // === HISTORY ===
