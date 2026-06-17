@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Attic Organizer — Know What's in Every Box</title>
+<meta name="description" content="Tap any box with your phone to see what's inside. NFC-powered storage organizer for your attic, garage, and basement.">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:#1a1e26;color:#e8e4df;
+    -webkit-font-smoothing:antialiased;line-height:1.6;
+  }
+  .container{max-width:1100px;margin:0 auto;padding:0 24px}
+
+  /* Nav */
+  .nav{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:20px 0;
+  }
+  .nav-logo{
+    font-family:'Outfit',sans-serif;font-size:22px;font-weight:700;
+    display:flex;align-items:center;gap:10px;color:#e8e4df;text-decoration:none;
+  }
+  .nav-logo .icon{width:36px;height:36px;background:linear-gradient(135deg,#4a6585,#3a506b);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .nav-links{display:flex;gap:32px;list-style:none;}
+  .nav-links a{color:#9a8e82;text-decoration:none;font-size:14px;font-weight:500;transition:color 0.2s;}
+  .nav-links a:hover{color:#d4a34a;}
+  .nav-cta{
+    background:#d4a34a;color:#1a1e26 !important;padding:10px 24px;
+    border-radius:10px;font-weight:600 !important;
+  }
+  .nav-cta:hover{background:#e0b050;}
+
+  /* Hero */
+  .hero{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:60px;padding:60px 0 80px;flex-wrap:wrap;
+  }
+  .hero-text{flex:1;min-width:320px;}
+  .hero-text .badge{
+    display:inline-flex;align-items:center;gap:6px;
+    background:rgba(58,80,107,0.3);border:1px solid rgba(74,101,133,0.3);
+    padding:6px 14px;border-radius:20px;font-size:12px;font-weight:500;
+    color:#9ab0cc;margin-bottom:20px;
+  }
+  .hero-text h1{
+    font-family:'Outfit',sans-serif;font-size:52px;font-weight:800;
+    line-height:1.1;margin-bottom:20px;
+  }
+  .hero-text h1 span{color:#d4a34a;}
+  .hero-text p{
+    font-size:18px;color:#9a8e82;line-height:1.7;
+    margin-bottom:32px;max-width:520px;
+  }
+  .hero-actions{display:flex;gap:16px;flex-wrap:wrap;}
+  .btn{
+    padding:14px 32px;border-radius:12px;font-weight:600;font-size:15px;
+    border:none;cursor:pointer;transition:all 0.2s;display:inline-flex;
+    align-items:center;gap:8px;text-decoration:none;
+  }
+  .btn-primary{background:#d4a34a;color:#1a1e26;}
+  .btn-primary:hover{background:#e0b050;transform:translateY(-1px);}
+  .btn-secondary{background:rgba(58,80,107,0.3);color:#e8e4df;border:1px solid rgba(74,101,133,0.4);}
+  .btn-secondary:hover{background:rgba(58,80,107,0.5);}
+  .btn-download{background:#4a6585;color:white;}
+  .btn-download:hover{background:#5a7a9e;transform:translateY(-1px);}
+
+  /* Phone mockup */
+  .hero-mockup{flex:0 0 320px;}
+  .phone{
+    background:#0d0f14;border-radius:44px;padding:14px;
+    box-shadow:0 30px 80px rgba(0,0,0,0.5);
+  }
+  .phone-screen{
+    background:#f0edea;border-radius:32px;overflow:hidden;
+    min-height:540px;display:flex;flex-direction:column;
+  }
+  .phone-header{
+    background:linear-gradient(135deg,#3a506b,#4a6585);
+    color:white;padding:18px 20px 14px;text-align:center;
+  }
+  .phone-header h3{font-family:'Outfit',sans-serif;font-size:18px;}
+  .phone-header .sub{font-size:10px;opacity:0.6;letter-spacing:1.5px;text-transform:uppercase;}
+  .phone-content{padding:20px;flex:1;}
+  .phone-box-card{
+    background:white;border-radius:14px;padding:20px;
+    border:1px solid #ddd7d0;margin-bottom:14px;
+  }
+  .phone-box-icon{
+    width:48px;height:48px;background:#3a506b;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;font-size:22px;
+    margin:0 auto 12px;color:white;
+  }
+  .phone-box-card h4{font-size:20px;font-weight:700;color:#1a1e26;text-align:center;margin-bottom:2px;}
+  .phone-box-card .date{font-size:12px;color:#888;text-align:center;margin-bottom:12px;}
+  .phone-box-card .items{font-size:13px;color:#555;border-top:1px solid #eee;padding-top:10px;}
+  .phone-box-card .items span{display:block;padding:3px 0;}
+  .phone-tap-btn{
+    display:block;width:100%;padding:14px;
+    background:#3a506b;color:white;border:none;
+    border-radius:12px;font-size:15px;font-weight:600;
+    cursor:pointer;transition:background 0.2s;text-align:center;
+  }
+  .phone-tap-btn:hover{background:#2c3f58;}
+  .phone-tap-hint{text-align:center;font-size:12px;color:#999;margin-top:8px;}
+
+  /* Features */
+  .section{padding:80px 0;}
+  .section-label{
+    font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;
+    color:#d4a34a;margin-bottom:12px;
+  }
+  .section-title{
+    font-family:'Outfit',sans-serif;font-size:36px;font-weight:700;
+    color:#e8e4df;margin-bottom:16px;
+  }
+  .section-sub{color:#9a8e82;font-size:17px;max-width:600px;margin-bottom:48px;}
+  .features-grid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    gap:24px;
+  }
+  .feature-card{
+    background:#232832;border-radius:16px;padding:32px;
+    border:1px solid rgba(74,101,133,0.15);transition:all 0.3s;
+  }
+  .feature-card:hover{transform:translateY(-3px);border-color:rgba(74,101,133,0.3);}
+  .feature-icon{
+    width:48px;height:48px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:24px;margin-bottom:20px;
+  }
+  .feature-card h3{font-family:'Outfit',sans-serif;font-size:18px;font-weight:600;margin-bottom:10px;color:#e8e4df;}
+  .feature-card p{font-size:14px;color:#9a8e82;line-height:1.6;}
+
+  /* How it works */
+  .steps{display:flex;gap:32px;flex-wrap:wrap;counter-reset:step;}
+  .step{flex:1;min-width:250px;position:relative;padding-top:40px;}
+  .step-num{
+    position:absolute;top:0;left:0;
+    width:32px;height:32px;border-radius:50%;
+    background:#d4a34a;color:#1a1e26;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;font-size:14px;
+  }
+  .step h3{font-size:18px;font-weight:600;margin-bottom:8px;color:#e8e4df;}
+  .step p{font-size:14px;color:#9a8e82;line-height:1.6;}
+
+  /* Download */
+  .download-cta{
+    background:linear-gradient(135deg,#2c3f58,#3a506b);
+    border-radius:20px;padding:60px;text-align:center;
+  }
+  .download-cta h2{font-family:'Outfit',sans-serif;font-size:32px;font-weight:700;margin-bottom:12px;}
+  .download-cta p{color:#9ab0cc;margin-bottom:32px;font-size:16px;}
+  .download-btns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;}
+  .btn-platform{
+    background:rgba(255,255,255,0.08);color:#e8e4df;
+    padding:16px 32px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);
+    cursor:pointer;transition:all 0.2s;text-decoration:none;
+    display:flex;align-items:center;gap:12px;font-weight:500;
+  }
+  .btn-platform:hover{background:rgba(255,255,255,0.15);}
+
+  /* Footer */
+  .footer{
+    text-align:center;padding:40px 0;
+    color:#6b5e52;font-size:13px;border-top:1px solid rgba(74,101,133,0.1);
+  }
+  .footer a{color:#9a8e82;text-decoration:none;}
+  .footer a:hover{color:#d4a34a;}
+
+  @media(max-width:768px){
+    .hero-text h1{font-size:36px;}
+    .nav-links{display:none;}
+    .section-title{font-size:28px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Nav -->
+  <nav class="nav">
+    <a href="#" class="nav-logo">
+      <span class="icon">📦</span> Attic Organizer
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#how">How It Works</a></li>
+      <li><a href="#download" class="nav-cta">Get the App</a></li>
+    </ul>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-text">
+      <div class="badge">📱 Now on Android &middot; iOS coming soon</div>
+      <h1>Know what's in <span>every box</span>.</h1>
+      <p>Tap any box with your phone and instantly see what's inside. No more digging through attic bins or guessing which Christmas decoration is which.</p>
+      <div class="hero-actions">
+        <a href="#download" class="btn btn-primary">📲 Get the App</a>
+        <a href="#how" class="btn btn-secondary">How It Works</a>
+      </div>
+    </div>
+    <div class="hero-mockup">
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="phone-header">
+            <h3>Attic Organizer</h3>
+            <div class="sub">📦 Tap. Read. Done.</div>
+          </div>
+          <div class="phone-content">
+            <div class="phone-box-card">
+              <div class="phone-box-icon">🏷️</div>
+              <h4>Christmas Lights</h4>
+              <div class="date">Packed Jan 12, 2026</div>
+              <div class="items">
+                <span>🎄 3 strings white LED</span>
+                <span>🔌 2 extension cords</span>
+                <span>⚡ 1 timer outlet</span>
+              </div>
+            </div>
+            <button class="phone-tap-btn" onclick="rotateBox()">🔄 Tap a Box</button>
+            <div class="phone-tap-hint">Hold phone near your box label</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="section" id="features">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything you need to <br>organize your storage.</h2>
+    <p class="section-sub">Just stick a tag on your box, tap it with your phone, and you'll always know what's inside.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(212,163,74,0.15);color:#d4a34a;">📲</div>
+        <h3>Tap to Read</h3>
+        <p>Hold your phone to any labeled box and see exactly what's inside — contents, date packed, and notes.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(74,101,133,0.2);color:#9ab0cc;">✏️</div>
+        <h3>Tap to Write</h3>
+        <p>Fresh box to the attic? Tap and type your contents list. Your label updates instantly — no sticky notes.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(74,101,133,0.2);color:#9ab0cc;">🎤</div>
+        <h3>Voice Notes</h3>
+        <p>Hands full? Use your voice. Just say "winter coats, size small, two pairs of boots" and it's saved.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(212,163,74,0.15);color:#d4a34a;">🔍</div>
+        <h3>Search Everything</h3>
+        <p>Need the tent? Type it in and find which box it's in. No more pulling down every bin from the attic ladder.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(74,101,133,0.2);color:#9ab0cc;">📋</div>
+        <h3>Contents List</h3>
+        <p>Full inventory per box with emoji support. See at a glance what's in storage without lifting a lid.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon" style="background:rgba(212,163,74,0.15);color:#d4a34a;">🏷️</div>
+        <h3>Digital Labels</h3>
+        <p>Reusable NFC tags for every box. Change contents whenever you want. No peeling or rewriting.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="section" id="how">
+    <div class="section-label">Simple Setup</div>
+    <h2 class="section-title">Three steps to an <br>organized attic.</h2>
+    <p class="section-sub">Takes about 30 seconds per box. You'll wonder why you didn't do it sooner.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Stick a Tag</h3>
+        <p>Apply an NFC tag to any box, bin, or tote. They're thin, waterproof, and stick to plastic, cardboard, or wood.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Tap & Write</h3>
+        <p>Open the Attic Organizer app, tap your phone to the tag, and type or speak what's inside. That's it.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Never Guess Again</h3>
+        <p>Next time you need something, just tap the box with your phone. No dragging bins downstairs to check.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Download -->
+  <section class="section" id="download">
+    <div class="download-cta">
+      <h2>Start organizing today.</h2>
+      <p>Free to download. Works with any NFC tag — no special hardware required.</p>
+      <div class="download-btns">
+        <a href="HarvestTag.apk" class="btn-platform" download>
+          <span style="font-size:24px;">🤖</span>
+          <span>Android APK<br><small style="color:#9a8e82;font-weight:400;">Download & install</small></span>
+        </a>
+        <a href="#" class="btn-platform" onclick="return false;">
+          <span style="font-size:24px;">🍎</span>
+          <span>iOS<br><small style="color:#9a8e82;font-weight:400;">Coming soon</small></span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>Attic Organizer &copy; 2026 &middot; <a href="https://github.com/bradthurston-creator/attic-organizer">GitHub</a></p>
+  </footer>
+
+</div>
+
+<script>
+  const boxes = [
+    { name: 'Christmas Lights', date: 'Packed Jan 12, 2026', items: ['🎄 3 strings white LED', '🔌 2 extension cords', '⚡ 1 timer outlet'] },
+    { name: 'Camping Gear', date: 'Packed Sep 5, 2025', items: ['⛺ 4-person tent', '🛌 2 sleeping bags', '🔥 Camp stove + fuel'] },
+    { name: 'Winter Clothes', date: 'Packed Mar 20, 2026', items: ['🧥 2 heavy coats', '🧣 3 scarves', '🧤 4 pairs gloves'] },
+    { name: 'Baby Keepsakes', date: 'Packed Jun 8, 2020', items: ['👶 First shoes', '📒 Baby book', '🖼️ Handprint frame'] },
+    { name: 'Tool Box', date: 'Packed Nov 3, 2025', items: ['🔧 Wrench set', '🪛 Screwdriver set', '🔨 Hammer', '📏 Tape measure'] },
+  ];
+  let i = 0;
+  function rotateBox() {
+    i = (i + 1) % boxes.length;
+    const b = boxes[i];
+    document.querySelector('.phone-box-card h4').textContent = b.name;
+    document.querySelector('.phone-box-card .date').textContent = b.date;
+    document.querySelector('.phone-box-card .items').innerHTML = b.items.map(it => '<span>' + it + '</span>').join('');
+  }
+</script>
+
+</body>
+</html>
