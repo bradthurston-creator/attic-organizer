@@ -836,6 +836,7 @@ async function startReading() {
     if (nfcPlugin) {
       const nfc = nfcPlugin;
       nfc.addListener('ndefDiscovered', (event) => {
+        if (isUpdatingTag) return;
         const tag = event.tag;
         let text = '';
         if (tag.ndefMessage) {
@@ -848,6 +849,7 @@ async function startReading() {
         handleReadComplete(text || 'Tag read (empty)');
       });
       nfc.addListener('tagDiscovered', (event) => {
+        if (isUpdatingTag) return;
         const tag = event.tag;
         let text = '';
         if (tag.ndefMessage) {
@@ -1018,6 +1020,9 @@ function renderScannedItems(container) {
       scannedItems.splice(idx, 1);
       renderScannedItems(container);
       updateTagBtn.style.display = 'block';
+      // Pre-fill edit fields with current box data
+      if (readEditName) readEditName.value = scannedBoxName;
+      if (readEditLocation) readEditLocation.value = scannedBoxLocation;
       showToast(`"${removed}" removed. Tap "Update Tag" to save.`);
     });
   });
