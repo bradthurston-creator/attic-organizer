@@ -727,7 +727,6 @@ async function writeToTag() {
       const listenerHandles = [];
 
       const handleTag = async (event) => {
-        if (!isWriteScanning) return;
         appendDebugLine('📡 tag discovered');
         const tag = event?.tag;
         appendDebugLine(`   techTypes: ${JSON.stringify(tag?.techTypes || [])}`);
@@ -770,7 +769,6 @@ async function writeToTag() {
       };
 
       listenerHandles.push(await nfc.addListener('tagDiscovered', handleTag));
-      listenerHandles.push(await nfc.addListener('ndefDiscovered', handleTag));
 
       await nfc.startScanning({ invalidateAfterFirstRead: true, androidReaderModeFlags: 15 });
     } else if (hasNfcSupport()) {
@@ -837,7 +835,6 @@ async function startReading() {
     if (nfcPlugin) {
       const nfc = nfcPlugin;
       nfc.addListener('ndefDiscovered', (event) => {
-        if (isUpdatingTag || isWriteScanning) return;
         const tag = event.tag;
         let text = '';
         if (tag.ndefMessage) {
@@ -850,7 +847,6 @@ async function startReading() {
         handleReadComplete(text || 'Tag read (empty)');
       });
       nfc.addListener('tagDiscovered', (event) => {
-        if (isUpdatingTag || isWriteScanning) return;
         const tag = event.tag;
         let text = '';
         if (tag.ndefMessage) {
@@ -1060,7 +1056,6 @@ async function updateTag() {
 
       const listenerHandles = [];
       const handleTag = async (event) => {
-        if (!isUpdatingTag) return;
         const tag = event?.tag;
         try {
           const messagePayload = Array.from(payload);
@@ -1085,7 +1080,6 @@ async function updateTag() {
       };
 
       listenerHandles.push(await nfc.addListener('tagDiscovered', handleTag));
-      listenerHandles.push(await nfc.addListener('ndefDiscovered', handleTag));
       await nfc.startScanning({ invalidateAfterFirstRead: true, androidReaderModeFlags: 15 });
     } else if (hasNfcSupport()) {
       const ndef = new NDEFReader();
