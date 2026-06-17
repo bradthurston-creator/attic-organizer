@@ -836,7 +836,7 @@ async function startReading() {
     if (nfcPlugin) {
       const nfc = nfcPlugin;
       nfc.addListener('ndefDiscovered', (event) => {
-        if (isUpdatingTag) return;
+        if (isUpdatingTag || isWriteScanning) return;
         const tag = event.tag;
         let text = '';
         if (tag.ndefMessage) {
@@ -849,7 +849,7 @@ async function startReading() {
         handleReadComplete(text || 'Tag read (empty)');
       });
       nfc.addListener('tagDiscovered', (event) => {
-        if (isUpdatingTag) return;
+        if (isUpdatingTag || isWriteScanning) return;
         const tag = event.tag;
         let text = '';
         if (tag.ndefMessage) {
