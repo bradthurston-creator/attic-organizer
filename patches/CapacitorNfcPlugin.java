@@ -289,68 +289,98 @@ public class CapacitorNfcPlugin extends Plugin {
 
     private void performWrite(PluginCall call, Tag tag, NdefMessage message, boolean allowFormat) {
         executor.execute(() -> {
-            // Try MIFARE Ultralight FIRST (NTAG215 uses this tech, not Ndef/NdefFormatable)
-            if (Arrays.asList(tag.getTechList()).contains(\"android.nfc.tech.MifareUltralight\")) {
-                try {
-                    MifareUltralight mifare = MifareUltralight.get(tag);
-                    if (mifare != null) {
-                        mifare.connect();
-                        byte[] ndefBytes = message.toByteArray();
-                        int ndefLen = ndefBytes.length;
-                        byte[] tlv;
-                        if (ndefLen < 255) {
-                            tlv = new byte[2 + ndefLen];
-                            tlv[0] = 0x03;
-                            tlv[1] = (byte) ndefLen;
-                            System.arraycopy(ndefBytes, 0, tlv, 2, ndefLen);
-                        } else {
-                            tlv = new byte[4 + ndefLen];
-                            tlv[0] = 0x03;
-                            tlv[1] = (byte) 0xFF;
-                            tlv[2] = (byte) (ndefLen >> 8);
-                            tlv[3] = (byte) ndefLen;
-                            System.arraycopy(ndefBytes, 0, tlv, 4, ndefLen);
+            try {
+                // Path 1: Standard NDEF write via Ndef API
+                Ndef ndef = Ndef.get(tag);
+                if (ndef != null) {
+                    try {
+                        ndef.connect();
+                        if (!ndef.isWritable()) {
+                            ndef.close();
+                            call.reject("Tag is read only.");
+                            return;
                         }
-                        byte[] full = new byte[tlv.length + 1];
-                        System.arraycopy(tlv, 0, full, 0, tlv.length);
-                        full[tlv.length] = (byte) 0xFE;
-                        writeMifarePages(mifare, full, 4);
-                        mifare.close();
+                        if (ndef.getMaxSize() < message.toByteArray().length) {
+                            ndef.close();
+                            call.reject("Tag capacity is insufficient for the provided message.");
+                            return;
+                        }
+                        ndef.writeNdefMessage(message);
+                        ndef.close();
                         call.resolve();
                         return;
+                    } catch (IOException | FormatException ndefEx) {
+                        // Ndef write failed — try to close and fall through to format path
+                        try { ndef.close(); } catch (IOException ignored) {}
+                        Log.w(TAG, "NDEF write failed, trying format path", ndefEx);
                     }
-                } catch (IOException e) {
-                    Log.w(TAG, \"MIFARE write failed, trying Ndef fallback\", e);
                 }
-            }
 
-            // Fallback: standard Ndef write
-            Ndef ndef = Ndef.get(tag);
-            try {
-                if (ndef != null) {
-                    ndef.connect();
-                    if (!ndef.isWritable()) {
-                        call.reject("Tag is read only.");
-                    } else if (ndef.getMaxSize() < message.toByteArray().length) {
-                        call.reject("Tag capacity is insufficient for the provided message.");
-                    } else {
-                        ndef.writeNdefMessage(message);
-                        call.resolve();
-                    }
-                    ndef.close();
-                } else if (allowFormat) {
-                    NdefFormatable formatable = NdefFormatable.get(tag);
-                    if (formatable != null) {
-                        formatable.connect();
-                        formatable.format(message);
-                        formatable.close();
-                        call.resolve();
-                    } else {
-                        call.reject("Tag does not support NDEF formatting.");
-                    }
-                } else {
+                if (!allowFormat) {
                     call.reject("Tag does not support NDEF.");
+                    return;
                 }
+
+                // Path 2: NdefFormatable
+                NdefFormatable formatable = NdefFormatable.get(tag);
+                if (formatable != null) {
+                    formatable.connect();
+                    formatable.format(message);
+                    formatable.close();
+                    call.resolve();
+                    return;
+                }
+
+                // Path 3: MIFARE Ultralight raw write (NTAG215 etc.)
+                if (Arrays.asList(tag.getTechList()).contains("android.nfc.tech.MifareUltralight")) {
+                    try {
+                        MifareUltralight mifare = MifareUltralight.get(tag);
+                        if (mifare != null) {
+                            mifare.connect();
+                            // Erase memory pages first
+                            byte[] empty4 = new byte[4];
+                            for (int p = 4; p < 16; p++) {
+                                try { mifare.writePage(p, empty4); } catch (IOException ignored) {}
+                            }
+                            // Build TLV: Type=0x03, Length, Data, Terminator=0xFE
+                            byte[] ndefBytes = message.toByteArray();
+                            int ndefLen = ndefBytes.length;
+                            byte[] tlv;
+                            if (ndefLen < 255) {
+                                tlv = new byte[2 + ndefLen];
+                                tlv[0] = 0x03;
+                                tlv[1] = (byte) ndefLen;
+                                System.arraycopy(ndefBytes, 0, tlv, 2, ndefLen);
+                            } else {
+                                tlv = new byte[4 + ndefLen];
+                                tlv[0] = 0x03;
+                                tlv[1] = (byte) 0xFF;
+                                tlv[2] = (byte) (ndefLen >> 8);
+                                tlv[3] = (byte) ndefLen;
+                                System.arraycopy(ndefBytes, 0, tlv, 4, ndefLen);
+                            }
+                            byte[] full = new byte[tlv.length + 1];
+                            System.arraycopy(tlv, 0, full, 0, tlv.length);
+                            full[tlv.length] = (byte) 0xFE;
+                            // Write capability container at page 3
+                            byte[] cc = new byte[4];
+                            cc[0] = (byte) 0xE1;  // NDEF magic
+                            cc[1] = (byte) 0x10;  // version 1.0
+                            cc[2] = (byte) 0x3C;  // 60 bytes avail (NTAG215)
+                            cc[3] = (byte) 0x00;  // read/write
+                            mifare.writePage(3, cc);
+                            // Write TLV data to pages 4+
+                            writeMifarePages(mifare, full, 4);
+                            mifare.close();
+                            call.resolve();
+                            return;
+                        }
+                    } catch (IOException e) {
+                        Log.w(TAG, "MIFARE write failed", e);
+                    }
+                }
+
+                call.reject("Tag does not support NDEF formatting.");
             } catch (IOException | FormatException e) {
                 call.reject("Failed to write NDEF message.", e);
             }
