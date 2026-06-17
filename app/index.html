@@ -147,18 +147,19 @@ body{
 }
 .item-row .item-del:hover{background:#f8d7da;}
 .item-add-row{
-  display:flex;gap:8px;margin-top:8px;
+  display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;
 }
 .item-add-row input{
-  flex:1;padding:10px 14px;border:1px solid #ddd7d0;border-radius:10px;
+  flex:1;min-width:0;padding:10px 14px;border:1px solid #ddd7d0;border-radius:10px;
   font-size:14px;font-family:'Inter',sans-serif;
 }
-.item-add-row button{
-  padding:10px 16px;border-radius:10px;border:none;
-  background:#3a506b;color:white;font-weight:600;font-size:14px;
-  cursor:pointer;white-space:nowrap;
+.item-add-row button, .item-add-row .mic-btn{
+  padding:10px 12px;border-radius:10px;border:none;
+  background:#3a506b;color:white;font-weight:600;font-size:13px;
+  cursor:pointer;white-space:nowrap;flex-shrink:0;
 }
 .item-add-row button:hover{background:#2c3f58;}
+.item-add-row .mic-btn{background:#5a7d9c;font-size:16px;}
 
 /* Read result item rows */
 .read-item{
@@ -208,6 +209,7 @@ body{
     <button class="tab active" data-tab="write" role="tab">✏️ Write</button>
     <button class="tab" data-tab="read" role="tab">📖 Read</button>
     <button class="tab" data-tab="history" role="tab">📋 Inventory</button>
+    <button class="tab" data-tab="search" role="tab">🔍 Search</button>
   </div>
 
   <!-- WRITE PANEL -->
@@ -315,21 +317,28 @@ body{
   <!-- HISTORY PANEL -->
   <div class="panel" id="panel-history">
     <div class="card">
-      <h2>Inventory</h2>
-      <div class="input-group" style="margin-bottom:12px">
-        <div style="display:flex;gap:8px;align-items:center;">
-          <input type="text" id="historySearch" placeholder="Search boxes by name..." autocomplete="off" style="flex:1;">
-          <button class="voice-btn-sm" id="voiceSearchBtn" title="Speak to search">🎤</button>
-        </div>
-      </div>
+      <h2>📋 Inventory</h2>
       <div id="historyList">
         <div class="history-empty">
           <span class="he-icon">📦</span>
           No boxes tagged yet. Start with the Write tab!
         </div>
       </div>
-      <button class="btn btn-secondary" id="exportBtn" style="margin-top:12px">📤 Export History</button>
-      <button class="btn btn-danger" id="clearBtn" style="margin-top:8px">🗑️ Clear All History</button>
+      <button class="btn btn-secondary" id="exportBtn" style="margin-top:12px">📤 Export Inventory</button>
+      <button class="btn btn-danger" id="clearBtn" style="margin-top:8px">🗑️ Clear All Inventory</button>
+    </div>
+  </div>
+
+  <!-- SEARCH PANEL -->
+  <div class="panel" id="panel-search">
+    <div class="card">
+      <h2>🔍 Search Boxes</h2>
+      <div class="input-group" style="margin-bottom:12px">
+        <input type="text" id="searchInput" placeholder="Search by box name, location, or item..." autocomplete="off" style="width:100%;padding:12px 14px;border:1px solid #ddd7d0;border-radius:10px;font-size:14px;box-sizing:border-box;">
+      </div>
+      <div id="searchResults">
+        <div class="history-empty"><span class="he-icon">🔍</span>Type above to search across all your boxes.</div>
+      </div>
     </div>
   </div>
 </div>
@@ -409,6 +418,7 @@ const $ = id => document.getElementById(id);
 const writePanel = $('panel-write');
 const readPanel = $('panel-read');
 const historyPanel = $('panel-history');
+const searchPanel = $('panel-search');
 const tabs = document.querySelectorAll('.tab');
 const boxLocation = $('boxLocation');
 const boxName = $('boxName');
@@ -436,7 +446,7 @@ const readNewScanBtn = $('readNewScanBtn');
 const readEditNameBtn = $('readEditNameBtn');
 const editBtnRef = $('readEditBtn') || null;
 const historyList = $('historyList');
-const historySearch = $('historySearch');
+// historySearch removed
 const recentBoxesCard = $('recentBoxesCard');
 const recentWriteList = $('recentWriteList');
 const toast = $('toast');
@@ -504,6 +514,7 @@ tabs.forEach(tab => {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     $('panel-' + tab.dataset.tab).classList.add('active');
     if (tab.dataset.tab === 'history') renderHistory();
+    if (tab.dataset.tab === 'search') { $('searchInput').focus(); runSearch(); }
   });
 });
 
@@ -700,13 +711,8 @@ voiceItemsBtn.addEventListener('click', () => {
 });
 
 // Voice search in inventory
-const voiceSearchBtn = $('voiceSearchBtn');
-voiceSearchBtn.addEventListener('click', () => {
-  startListening(voiceSearchBtn, (transcript) => {
-    historySearch.value = transcript;
-    renderHistory();
-  });
-});
+// voiceSearchBtn removed
+
 
 // === VALIDATE WRITE FORM ===
 function validateWriteForm() {
@@ -1213,11 +1219,10 @@ function addToHistory(name, location, date) {
 }
 
 function renderHistory() {
-  const q = historySearch.value.toLowerCase().trim();
-  const filtered = q ? history.filter(h => h.name.toLowerCase().includes(q)) : history;
+  const filtered = history;
 
   if (filtered.length === 0) {
-    historyList.innerHTML = `<div class="history-empty"><span class="he-icon">📦</span>${q ? 'No boxes match your search.' : 'No boxes tagged yet. Start with the Write tab!'}</div>`;
+    historyList.innerHTML = `<div class="history-empty"><span class="he-icon">📦</span>No boxes tagged yet. Start with the Write tab!</div>`;
     return;
   }
 
@@ -1228,14 +1233,14 @@ function renderHistory() {
         <div class="hi-date">📅 ${escapeHtml(h.date)}${h.location ? ` &middot; 📍 ${escapeHtml(h.location)}` : ''}</div>
         <span class="hi-tag">${escapeHtml(h.timestamp)}</span>
       </div>
-      <button class="hi-del" data-id="${h.id}" title="Remove">✕</button>
+      <button class="hi-del" data-id="${h.id}" title="Delete box">✕</button>
     </div>
   `).join('');
 
   historyList.querySelectorAll('.hi-del').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = parseInt(btn.dataset.id);
-      if (confirm('Remove this box from history?')) {
+      if (confirm('Delete this box and all its contents from inventory?')) {
         deleteHistoryItem(id);
       }
     });
@@ -1250,7 +1255,6 @@ function deleteHistoryItem(id) {
   showToast('🗑️ Box removed');
 }
 
-historySearch.addEventListener('input', renderHistory);
 
 function renderRecentBoxes() {
   if (history.length === 0) {
@@ -1304,6 +1308,63 @@ function showToast(msg) {
   toast.textContent = msg;
   toast.classList.add('show');
   setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+
+// === SEARCH ===
+function runSearch() {
+  if (!$('searchInput')) return;
+  var q = $('searchInput').value.toLowerCase().trim();
+  var results = $('searchResults');
+  if (!q) {
+    results.innerHTML = '<div class="history-empty"><span class="he-icon">🔍</span>Type above to search across all your boxes.</div>';
+    return;
+  }
+
+  var matches = history.filter(function(h) {
+    var name = (h.name || '').toLowerCase();
+    var loc = (h.location || '').toLowerCase();
+    var items = (h.items || []).join(' ').toLowerCase();
+    return name.indexOf(q) >= 0 || loc.indexOf(q) >= 0 || items.indexOf(q) >= 0;
+  });
+
+  if (matches.length === 0) {
+    results.innerHTML = '<div class="history-empty"><span class="he-icon">🔍</span>No boxes match "' + escapeHtml($('searchInput').value) + '".</div>';
+    return;
+  }
+
+  results.innerHTML = matches.map(function(h) {
+    return '<div class="history-item" onclick="goToBox(\'' + escapeHtml(h.name) + '\')">' +
+      '<div class="hi-content">' +
+      '<div class="hi-name">' + escapeHtml(h.name) + '</div>' +
+      '<div class="hi-date">📅 ' + escapeHtml(h.date) + (h.location ? ' · 📍 ' + escapeHtml(h.location) : '') + '</div>' +
+      '<div class="hi-items" style="font-size:12px;color:#6b5e52;margin-top:4px;">📝 ' + (h.items || []).length + ' item' + ((h.items||[]).length !== 1 ? 's' : '') + '</div>' +
+      '</div></div>';
+  }).join('');
+}
+
+var searchTimer;
+$('searchInput').addEventListener('input', function() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(runSearch, 200);
+});
+
+function goToBox(name) {
+  var found = null;
+  for (var i = 0; i < history.length; i++) {
+    if (history[i].name === name) { found = history[i]; break; }
+  }
+  if (!found) return;
+  scannedBoxName = found.name;
+  scannedBoxLocation = found.location || '';
+  scannedBoxDate = found.date;
+  scannedItems = found.items || [];
+  // Switch to read tab
+  tabs.forEach(function(t) { t.classList.remove('active'); });
+  document.querySelector('[data-tab="read"]').classList.add('active');
+  document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+  $('panel-read').classList.add('active');
+  $('readBtn').click();
 }
 
 // === INIT ===
