@@ -290,7 +290,7 @@ public class CapacitorNfcPlugin extends Plugin {
     private void performWrite(PluginCall call, Tag tag, NdefMessage message, boolean allowFormat) {
         executor.execute(() -> {
             // Try MIFARE Ultralight FIRST (NTAG215 uses this tech, not Ndef/NdefFormatable)
-            if (Arrays.asList(tag.getTechList()).contains(\"android.nfc.tech.MifareUltralight\")) {
+            if (Arrays.asList(tag.getTechList()).contains("android.nfc.tech.MifareUltralight")) {
                 try {
                     MifareUltralight mifare = MifareUltralight.get(tag);
                     if (mifare != null) {
@@ -320,7 +320,7 @@ public class CapacitorNfcPlugin extends Plugin {
                         return;
                     }
                 } catch (IOException e) {
-                    Log.w(TAG, \"MIFARE write failed, trying Ndef fallback\", e);
+                    Log.w(TAG, "MIFARE write failed, trying Ndef fallback", e);
                 }
             }
 
