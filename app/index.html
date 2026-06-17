@@ -10,7 +10,6 @@
 <link rel="apple-touch-icon" href="icon-192.svg">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-/* Reset */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{height:100%}
 body{
@@ -20,8 +19,6 @@ body{
   line-height:1.5;min-height:100%;
   padding-bottom:80px;
 }
-
-/* App shell */
 .app-header{
   background:linear-gradient(135deg,#3a506b,#4a6585);
   color:white;padding:20px 20px 16px;
@@ -37,7 +34,6 @@ body{
 }
 .container{max-width:480px;margin:0 auto;padding:16px}
 
-/* Tabs */
 .tabs{display:flex;gap:0;margin-bottom:20px;border-radius:12px;overflow:hidden;background:#e0dbd6;}
 .tab{
   flex:1;padding:12px;text-align:center;font-weight:500;font-size:14px;
@@ -46,15 +42,12 @@ body{
 .tab.active{background:#3a506b;color:white;}
 .tab:not(.active):hover{background:#d5cec7;}
 
-/* Panels */
 .panel{display:none;}
 .panel.active{display:block;}
 
-/* Cards */
 .card{background:white;border-radius:16px;padding:24px;box-shadow:0 2px 12px rgba(0,0,0,0.05);margin-bottom:16px;}
 .card h2{font-family:'Outfit',sans-serif;font-size:18px;color:#3a506b;margin-bottom:12px;}
 
-/* Buttons */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   padding:14px 24px;border-radius:12px;font-weight:600;font-size:15px;
@@ -66,9 +59,11 @@ body{
 .btn-secondary{background:#e0dbd6;color:#3a506b;}
 .btn-secondary:hover{background:#d5cec7;}
 .btn-success{background:#4a7c59;color:white;}
+.btn-success:hover{background:#3d6b4a;}
 .btn-danger{background:#c0392b;color:white;}
+.btn-danger:hover{background:#a83226;}
+.btn-sm{padding:8px 14px;font-size:13px;width:auto;}
 
-/* Inputs */
 .input-group{margin-bottom:16px;}
 .input-group label{display:block;font-size:13px;font-weight:500;color:#3a506b;margin-bottom:6px;}
 .input-group input,.input-group textarea{
@@ -80,24 +75,8 @@ body{
   outline:none;border-color:#d4a34a;
 }
 .input-group textarea{resize:vertical;min-height:180px;}
-.box-name-group textarea{
-  min-height:200px;
-  line-height:1.5;
-  padding:20px;
-  border-radius:18px;
-  box-shadow:0 8px 24px rgba(0,0,0,0.06);
-  font-size:18px;
-}
-.box-name-group textarea::placeholder{color:#9e8e7e;}
-.box-name-group .char-counter{
-  margin-top:8px;
-  font-size:12px;
-  color:#6b5e52;
-  text-align:right;
-}
-.box-date-group input{min-height:56px;font-size:15px;text-align:center;}
+.input-group textarea.box-contents{min-height:100px;resize:vertical;}
 
-/* Voice button */
 .voice-btn{
   width:56px;height:56px;border-radius:50%;border:none;
   background:#d4a34a;color:white;font-size:24px;
@@ -109,7 +88,6 @@ body{
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,0.4)}50%{box-shadow:0 0 0 16px rgba(192,57,43,0)}}
 .voice-btn:disabled{opacity:0.4;cursor:not-allowed;animation:none;}
 
-/* Status */
 .status-bar{
   background:#e0dbd6;border-radius:10px;padding:10px 14px;
   font-size:13px;color:#3a506b;margin-bottom:16px;text-align:center;min-height:20px;
@@ -117,7 +95,6 @@ body{
 .status-bar.success{background:#d4edda;color:#2d6a2d;}
 .status-bar.error{background:#f8d7da;color:#c0392b;}
 
-/* NFC animation */
 .nfc-animation{text-align:center;padding:20px 0;}
 .nfc-icon{font-size:64px;display:block;margin-bottom:8px;}
 .nfc-pulse{animation:nfcPulse 1.5s infinite;}
@@ -144,9 +121,57 @@ body{
 .history-empty{text-align:center;padding:40px 0;color:#6b5e52;}
 .history-empty .he-icon{font-size:48px;display:block;margin-bottom:12px;}
 
-/* Empty state nfc indicator */
-.nfc-unavailable{background:#fff3cd;border-radius:10px;padding:12px 14px;font-size:13px;color:#856404;margin-bottom:16px;}
+/* Item list */
+.item-list{margin-bottom:12px;}
+.item-row{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 12px;margin-bottom:6px;
+  background:#f8f6f2;border-radius:10px;
+  border:1px solid #e0dbd6;
+}
+.item-row .item-text{flex:1;font-size:14px;color:#1e1e24;}
+.item-row .item-del{
+  width:28px;height:28px;border-radius:50%;border:none;
+  background:transparent;color:#c0392b;font-size:14px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all 0.2s;flex-shrink:0;
+}
+.item-row .item-del:hover{background:#f8d7da;}
+.item-add-row{
+  display:flex;gap:8px;margin-top:8px;
+}
+.item-add-row input{
+  flex:1;padding:10px 14px;border:1px solid #ddd7d0;border-radius:10px;
+  font-size:14px;font-family:'Inter',sans-serif;
+}
+.item-add-row button{
+  padding:10px 16px;border-radius:10px;border:none;
+  background:#3a506b;color:white;font-weight:600;font-size:14px;
+  cursor:pointer;white-space:nowrap;
+}
+.item-add-row button:hover{background:#2c3f58;}
 
+/* Read result item rows */
+.read-item{
+  display:flex;align-items:center;gap:8px;
+  padding:10px 12px;margin-bottom:6px;
+  background:#f8f6f2;border-radius:10px;
+  border:1px solid #e0dbd6;
+}
+.read-item .ri-text{flex:1;font-size:14px;color:#1e1e24;}
+.read-item .ri-remove{
+  width:28px;height:28px;border-radius:50%;border:none;
+  background:transparent;color:#c0392b;font-size:14px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all 0.2s;flex-shrink:0;
+}
+.read-item .ri-remove:hover{background:#f8d7da;}
+.read-header{
+  font-size:18px;font-weight:600;color:#3a506b;margin-bottom:4px;
+}
+.read-date{font-size:13px;color:#6b5e52;margin-bottom:12px;}
+
+.nfc-unavailable{background:#fff3cd;border-radius:10px;padding:12px 14px;font-size:13px;color:#856404;margin-bottom:16px;}
 
 .toast{
   position:fixed;bottom:90px;left:50%;transform:translateX(-50%);
@@ -156,7 +181,6 @@ body{
 }
 .toast.show{opacity:1;}
 
-/* Barcode / tag preview */
 .tag-preview{
   display:inline-flex;align-items:center;gap:8px;
   background:#f0edea;border-radius:8px;padding:6px 12px;font-size:12px;color:#3a506b;
@@ -181,29 +205,34 @@ body{
   <div class="panel active" id="panel-write">
     <div class="card">
       <h2>Tag a Box</h2>
-      
+
       <div id="nfcSupport" class="nfc-unavailable" style="display:none">
-        ⚡ Your browser doesn't support NFC writing. Type or speak the contents below, then tap the tag with a NFC writer app.
+        ⚡ Your browser doesn't support NFC writing. Type the contents below, then tap with an NFC writer app.
       </div>
 
-      <button class="voice-btn" id="voiceBtn" title="Speak box contents">
-        🎤
-      </button>
+      <button class="voice-btn" id="voiceBtn" title="Speak box contents">🎤</button>
       <div class="status-bar" id="voiceStatus">Tap the mic and describe what's in your box</div>
 
-      <div class="input-group box-name-group">
-          <label for="boxName">What's in the box?</label>
-          <textarea id="boxName" placeholder="e.g. Christmas decorations, Winter clothes, Old photo albums..." autocomplete="off"></textarea>
-          <div class="char-counter" id="boxNameCounter">0 / 120</div>
-        </div>
-        <div class="input-group" style="max-width:160px">
-          <label for="boxDate">Date</label>
-          <input type="date" id="boxDate">
-        </div>
+      <div class="input-group">
+        <label for="boxName">Box name</label>
+        <input type="text" id="boxName" placeholder="e.g. Christmas Decorations" autocomplete="off" maxlength="120">
+        <div class="char-counter" id="boxNameCounter" style="font-size:12px;color:#6b5e52;margin-top:4px;">0 / 120</div>
+      </div>
+      <div class="input-group" style="max-width:160px">
+        <label for="boxDate">Date packed</label>
+        <input type="date" id="boxDate">
+      </div>
 
-      <button class="btn btn-primary" id="writeBtn" disabled>
-        📱 Write to Tag
-      </button>
+      <div class="input-group">
+        <label>Contents <span style="font-weight:400;color:#9a8e82;font-size:12px;">— tap + to add each item</span></label>
+        <div class="item-list" id="writeItems"></div>
+        <div class="item-add-row">
+          <input type="text" id="writeItemInput" placeholder="e.g. 3 strings of lights" autocomplete="off">
+          <button id="writeItemAddBtn">+ Add</button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="writeBtn" disabled>📱 Write to Tag</button>
       <div id="writeResult" class="status-bar" style="margin-top:12px;display:none"></div>
     </div>
 
@@ -221,21 +250,27 @@ body{
 
   <!-- READ PANEL -->
   <div class="panel" id="panel-read">
-    <div class="card">
+    <div class="card" id="readScanCard">
       <h2>Read a Box</h2>
       <div class="nfc-animation">
         <span class="nfc-icon" id="readIcon">📱</span>
         <div class="nfc-label" id="readLabel">Tap your phone to an Attic Organizer sticker</div>
       </div>
-      <button class="btn btn-primary" id="readBtn">
-        📖 Start Reading
-      </button>
+      <button class="btn btn-primary" id="readBtn">📖 Start Reading</button>
       <div id="readResult" class="status-bar" style="margin-top:12px;display:none"></div>
     </div>
 
     <div class="card" id="lastScannedCard" style="display:none">
-      <h2>Last Scanned</h2>
+      <div id="lastScannedHeader" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h2 style="margin:0;">Box Contents</h2>
+        <button class="btn btn-sm btn-secondary" id="readEditNameBtn">✏️ Rename</button>
+      </div>
       <div id="lastScannedContent"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
+        <button class="btn btn-sm btn-primary" id="updateTagBtn" style="flex:1;">📱 Update Tag</button>
+        <button class="btn btn-sm btn-secondary" id="readNewScanBtn">📖 Scan Another</button>
+      </div>
+      <div id="updateResult" class="status-bar" style="margin-top:12px;display:none"></div>
     </div>
   </div>
 
@@ -252,12 +287,8 @@ body{
           No boxes tagged yet. Start with the Write tab!
         </div>
       </div>
-      <button class="btn btn-secondary" id="exportBtn" style="margin-top:12px">
-        📤 Export History
-      </button>
-      <button class="btn btn-danger" id="clearBtn" style="margin-top:8px">
-        🗑️ Clear All History
-      </button>
+      <button class="btn btn-secondary" id="exportBtn" style="margin-top:12px">📤 Export History</button>
+      <button class="btn btn-danger" id="clearBtn" style="margin-top:8px">🗑️ Clear All History</button>
     </div>
   </div>
 </div>
@@ -276,8 +307,12 @@ const getSpeechPlugin = () => getCapacitorPlugin('SpeechRecognition');
 const hasCapacitorSpeech = () => !!getSpeechPlugin();
 let nfcReading = false;
 let isWriteScanning = false;
+let scannedBoxName = '';
+let scannedBoxDate = '';
+let scannedItems = [];
+let isUpdatingTag = false;
 const MAX_BOX_LENGTH = 120;
-const MAX_NFC_BYTES = 240;
+const MAX_NFC_BYTES = 504;
 const NFC_LANGUAGE_CODE = 'en';
 
 function buildTextPayload(text) {
@@ -303,6 +338,26 @@ function decodeTextPayload(payload) {
   }
 }
 
+// Parse tag text into { name, date, items[] }
+function parseTagData(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+  let name = '', date = '', items = [];
+  for (const line of lines) {
+    if (line.startsWith('📦')) name = line.replace('📦', '').trim();
+    else if (line.startsWith('📅')) date = line.replace('📅', '').trim();
+    else if (line.startsWith('📝')) items.push(line.replace('📝', '').trim());
+  }
+  return { name, date, items };
+}
+
+// Build tag text from name, date, items
+function buildTagData(name, date, items) {
+  let text = `📦 ${name}\n📅 ${date}`;
+  for (const item of items) {
+    if (item.trim()) text += `\n📝 ${item.trim()}`;
+  }
+  return text;
+}
 
 // === DOM REFS ===
 const $ = id => document.getElementById(id);
@@ -316,22 +371,30 @@ const boxName = $('boxName');
 const boxDate = $('boxDate');
 const writeBtn = $('writeBtn');
 const writeResult = $('writeResult');
+const writeItems = $('writeItems');
+const writeItemInput = $('writeItemInput');
+const writeItemAddBtn = $('writeItemAddBtn');
 const readBtn = $('readBtn');
+const readScanCard = $('readScanCard');
 const readResult = $('readResult');
 const readIcon = $('readIcon');
 const readLabel = $('readLabel');
+const lastScannedCard = $('lastScannedCard');
+const lastScannedContent = $('lastScannedContent');
+const lastScannedHeader = $('lastScannedHeader');
+const updateTagBtn = $('updateTagBtn');
+const updateResult = $('updateResult');
+const readNewScanBtn = $('readNewScanBtn');
+const readEditNameBtn = $('readEditNameBtn');
 const historyList = $('historyList');
 const historySearch = $('historySearch');
 const recentBoxesCard = $('recentBoxesCard');
 const recentWriteList = $('recentWriteList');
-const lastScannedCard = $('lastScannedCard');
-const lastScannedContent = $('lastScannedContent');
 const toast = $('toast');
 const nfcSupport = $('nfcSupport');
 const debugCard = $('debugCard');
 const debugLog = $('debugLog');
 const clearDebugBtn = $('clearDebugBtn');
-const appHeader = document.querySelector('.app-header');
 let debugVisible = false;
 const debugLines = [];
 const MAX_DEBUG_LINES = 30;
@@ -343,7 +406,6 @@ function appendDebugLine(line) {
   if (debugLines.length > MAX_DEBUG_LINES) debugLines.shift();
   debugLog.textContent = debugLines.join('\n');
 }
-
 clearDebugBtn?.addEventListener('click', () => {
   debugLines.length = 0;
   debugLog.textContent = '';
@@ -352,13 +414,11 @@ clearDebugBtn?.addEventListener('click', () => {
   showToast('Debug trace hidden');
 });
 
-firstLoadToastShown = false;
 appendDebugLine('📄 App loaded, ready.');
 appendDebugLine(`🌐 hasNativeNfc: ${hasNativeNfc()}`);
 appendDebugLine(`🌐 hasWebNfc: ${nfcInBrowser}`);
 appendDebugLine(`🌐 hasCapacitorSpeech: ${hasCapacitorSpeech()}`);
 
-// === SET DEFAULT DATE ===
 boxDate.value = new Date().toISOString().split('T')[0];
 
 // === TABS ===
@@ -371,6 +431,52 @@ tabs.forEach(tab => {
     if (tab.dataset.tab === 'history') renderHistory();
   });
 });
+
+// === WRITE ITEMS ===
+let writeItemList = [];
+
+function renderWriteItems() {
+  if (writeItemList.length === 0) {
+    writeItems.innerHTML = '<div style="color:#9a8e82;font-size:13px;padding:8px 4px;">No items yet. Add some below.</div>';
+    return;
+  }
+  writeItems.innerHTML = writeItemList.map((item, i) =>
+    `<div class="item-row">
+      <span class="item-text">${escapeHtml(item)}</span>
+      <button class="item-del" data-idx="${i}" title="Remove">✕</button>
+    </div>`
+  ).join('');
+  writeItems.querySelectorAll('.item-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      writeItemList.splice(idx, 1);
+      renderWriteItems();
+      validateWriteForm();
+    });
+  });
+}
+
+writeItemAddBtn.addEventListener('click', () => {
+  const val = writeItemInput.value.trim();
+  if (!val) return;
+  writeItemList.push(val);
+  writeItemInput.value = '';
+  renderWriteItems();
+  validateWriteForm();
+});
+
+writeItemInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    writeItemAddBtn.click();
+  }
+});
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
 
 // === VOICE INPUT ===
 let recognition = null;
@@ -394,7 +500,6 @@ if (!useCapacitorSpeech && ('webkitSpeechRecognition' in window || 'SpeechRecogn
     voiceStatus.className = 'status-bar success';
     voiceBtn.classList.remove('listening');
     isListening = false;
-    
     parseVoiceInput(transcript);
   };
   
@@ -415,11 +520,8 @@ if (!useCapacitorSpeech && ('webkitSpeechRecognition' in window || 'SpeechRecogn
 }
 
 voiceBtn.addEventListener('click', async () => {
-  if (useCapacitorSpeech) {
-    await handleCapacitorSpeech();
-  } else {
-    await handleWebSpeech();
-  }
+  if (useCapacitorSpeech) await handleCapacitorSpeech();
+  else await handleWebSpeech();
 });
 
 async function ensureSpeechPermission() {
@@ -432,12 +534,7 @@ async function ensureSpeechPermission() {
 
 async function handleCapacitorSpeech() {
   if (!speechPlugin) return;
-  if (isListening) {
-    await speechPlugin.stop();
-    cleanupSpeech();
-    return;
-  }
-
+  if (isListening) { await speechPlugin.stop(); cleanupSpeech(); return; }
   try {
     const { available } = await speechPlugin.available();
     if (!available) {
@@ -445,14 +542,12 @@ async function handleCapacitorSpeech() {
       voiceStatus.className = 'status-bar error';
       return;
     }
-
     const granted = await ensureSpeechPermission();
     if (!granted) {
-      voiceStatus.textContent = '❌ Microphone permission denied. Go to Settings → Apps → Attic Organizer → Permissions → enable Microphone.';
+      voiceStatus.textContent = '❌ Microphone permission denied. Check Settings → Apps → Attic Organizer → Permissions.';
       voiceStatus.className = 'status-bar error';
       return;
     }
-
     cleanupSpeech();
     speechListenerHandles.push(await speechPlugin.addListener('partialResults', event => {
       const transcript = event.matches && event.matches[0];
@@ -462,57 +557,39 @@ async function handleCapacitorSpeech() {
       voiceStatus.className = 'status-bar success';
       parseVoiceInput(transcript);
     }));
-
     speechListenerHandles.push(await speechPlugin.addListener('error', event => {
       voiceStatus.textContent = `❌ Voice error: ${event.message || event.code || 'Unknown error'}`;
       voiceStatus.className = 'status-bar error';
       cleanupSpeech();
     }));
-
-    speechListenerHandles.push(await speechPlugin.addListener('readyForNextSession', () => {
-      cleanupSpeech();
-    }));
-
-    await speechPlugin.start({
-      language: 'en-US',
-      partialResults: true,
-      popup: false,
-      addPunctuation: true,
-      maxResults: 3,
-      allowForSilence: 3000,
-    });
-
-    latestSpeechTranscript = '';
+    speechListenerHandles.push(await speechPlugin.addListener('readyForNextSession', () => { cleanupSpeech(); }));
+    await speechPlugin.start({ language: 'en-US', partialResults: true, popup: false, addPunctuation: true, maxResults: 3, allowForSilence: 3000 });
     isListening = true;
     voiceBtn.classList.add('listening');
-    voiceStatus.textContent = '🎤 Listening... speak now';
+    voiceStatus.textContent = '🎤 Listening...';
     voiceStatus.className = 'status-bar';
   } catch (err) {
     cleanupSpeech();
-    voiceStatus.textContent = `❌ Voice error: ${err.message || 'Unknown error'}. Try typing instead.`;
+    voiceStatus.textContent = `❌ Voice error: ${err.message || 'Unknown error'}`;
     voiceStatus.className = 'status-bar error';
   }
 }
 
 async function handleWebSpeech() {
   if (!recognition) {
-    voiceStatus.textContent = '❌ Voice input not available in this browser. Try Chrome on Android or Safari on iOS.';
+    voiceStatus.textContent = '❌ Voice input not available in this browser. Try Chrome on Android.';
     voiceStatus.className = 'status-bar error';
     return;
   }
-  if (isListening) {
-    recognition.stop();
-    return;
-  }
-  
+  if (isListening) { recognition.stop(); return; }
   try {
     recognition.start();
     isListening = true;
     voiceBtn.classList.add('listening');
-    voiceStatus.textContent = '🎤 Listening... speak now';
+    voiceStatus.textContent = '🎤 Listening...';
     voiceStatus.className = 'status-bar';
   } catch(e) {
-    voiceStatus.textContent = `❌ Speech error: ${e.message || 'Unknown error'}. Try typing instead.`;
+    voiceStatus.textContent = `❌ Speech error: ${e.message || 'Unknown error'}`;
     voiceStatus.className = 'status-bar error';
   }
 }
@@ -525,18 +602,15 @@ function cleanupSpeech() {
   speechPlugin?.stop?.().catch(() => {});
 }
 
-
 function parseVoiceInput(text) {
   const today = new Date();
   let dateStr = boxDate.value;
-  
   const datePatterns = [
     { re: /(today|tonight)/i, offset: 0 },
     { re: /(yesterday)/i, offset: -1 },
     { re: /(tomorrow)/i, offset: 1 },
     { re: /(last\s+night)/i, offset: -1 },
   ];
-  
   for (const dp of datePatterns) {
     if (dp.re.test(text)) {
       const d = new Date(today);
@@ -545,7 +619,6 @@ function parseVoiceInput(text) {
       break;
     }
   }
-  
   const dateMatch = text.match(/(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?/);
   if (!dateMatch) {
     const monthNames = ['january','february','march','april','may','june','july','august','september','october','november','december'];
@@ -558,7 +631,6 @@ function parseVoiceInput(text) {
       if (!isNaN(d.getTime())) dateStr = d.toISOString().split('T')[0];
     }
   }
-  
   let clean = text
     .replace(/(today|tonight|yesterday|tomorrow|last\s+night)/gi, '')
     .replace(/(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?,?\s*\d{0,4}/gi, '')
@@ -566,9 +638,18 @@ function parseVoiceInput(text) {
     .replace(/^(made|put|boxed|stored|packed|sorted|saved)\s+/i, '')
     .replace(/\s+/g, ' ').trim();
   
-  boxName.value = clean.charAt(0).toUpperCase() + clean.slice(1);
+  // Split voice input into items
+  const parts = clean.split(/[,;.]+/).map(p => p.trim()).filter(p => p);
+  if (parts.length > 1) {
+    const first = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
+    boxName.value = first;
+    writeItemList = parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1));
+  } else {
+    boxName.value = clean.charAt(0).toUpperCase() + clean.slice(1);
+  }
   boxName.dispatchEvent(new Event('input'));
   boxDate.value = dateStr;
+  renderWriteItems();
   validateWriteForm();
 }
 
@@ -587,86 +668,59 @@ async function writeToTag() {
   if (isWriteScanning) return;
   isWriteScanning = true;
   if (!boxName.value.trim()) return;
-  
+
   writeBtn.disabled = true;
   writeBtn.textContent = '⏳ Hold near tag...';
   writeResult.style.display = 'block';
   writeResult.className = 'status-bar';
   writeResult.textContent = 'Hold your phone near the Attic Organizer sticker...';
-  
+
   const name = boxName.value.trim().slice(0, MAX_BOX_LENGTH);
   boxName.value = name;
-  const content = `📦 ${name}\n📅 ${boxDate.value}`;
-  
+  const content = buildTagData(name, boxDate.value, writeItemList);
+
   try {
     const nfcPlugin = getNfcPlugin();
 
     if (nfcPlugin) {
       const nfc = nfcPlugin;
       const payload = buildTextPayload(content);
- 
+
       if (payload.length > MAX_NFC_BYTES) {
-        throw new Error(`Message is too long (${payload.length} bytes). Shorten the box description.`);
+        throw new Error(`Message is too long (${payload.length} bytes). Remove some items.`);
       }
-      
-      appendDebugLine('🛰️ Native NFC plugin detected. Starting write...');
+
+      appendDebugLine('🛰️ Native NFC write starting...');
       appendDebugLine(`   payload bytes: ${payload.length}`);
-      appendDebugLine('   waiting for tag discovery...');
 
       cleanupSpeech();
-
       const listenerHandles = [];
 
       const handleTag = async (event) => {
         appendDebugLine('📡 tag discovered');
         const tag = event?.tag;
-        appendDebugLine(`   event type: ${event?.type || 'unknown'}`);
         appendDebugLine(`   techTypes: ${JSON.stringify(tag?.techTypes || [])}`);
-        appendDebugLine(`   tag id: ${JSON.stringify(tag?.id || [])}`);
-        appendDebugLine(`   tag type: ${tag?.type || 'unknown'}`);
-        appendDebugLine(`   isWritable: ${tag?.isWritable}, maxSize: ${tag?.maxSize}`);
         try {
           if (!tag || !tag.techTypes || !tag.techTypes.includes('android.nfc.tech.Ndef')) {
-            appendDebugLine('   tag is not NDEF — checking if formatable');
             if (tag?.techTypes?.includes('android.nfc.tech.NdefFormatable')) {
-              appendDebugLine('   tag is NdefFormatable — erasing to format it first');
-              try {
-                await nfc.erase();
-                appendDebugLine('   erase() succeeded — tag formatted');
-              } catch (formatErr) {
-                appendDebugLine(`   erase() failed: ${formatErr.message || formatErr}`);
-                throw new Error('Could not format tag for NDEF writing.');
-              }
-            } else {
-              appendDebugLine('   tag not NdefFormatable — trying write with allowFormat=true');
+              try { await nfc.erase(); } catch (e) { throw new Error('Could not format tag.'); }
             }
           }
-
           const messagePayload = Array.from(payload);
-          appendDebugLine(`   writing ${messagePayload.length} bytes via native plugin`);
-
+          appendDebugLine(`   writing ${messagePayload.length} bytes`);
           await nfc.write({
-            records: [{
-              tnf: 1,
-              type: [0x54],
-              id: [],
-              payload: messagePayload,
-              languageCode: NFC_LANGUAGE_CODE,
-              encoding: 'utf-8'
-            }],
+            records: [{ tnf: 1, type: [0x54], id: [], payload: messagePayload, languageCode: NFC_LANGUAGE_CODE, encoding: 'utf-8' }],
             allowFormat: true
           });
-          appendDebugLine('   write() resolved without throwing');
-
-          const data = decodeTextPayload(payload);
-          const parsedName = data.split('\n').find(line => line.startsWith('📦'))?.replace('📦 ', '') || boxName.value.trim();
-          addToHistory(parsedName, boxDate.value);
+          appendDebugLine('   write() succeeded');
+          addToHistory(name, boxDate.value);
           writeResult.className = 'status-bar success';
-          writeResult.textContent = `✅ Written! Tap your phone to the box to read "${parsedName}"`;
-
+          writeResult.textContent = `✅ Written! Tap to read "${name}"`;
           setTimeout(() => {
             boxName.value = '';
             boxDate.value = new Date().toISOString().split('T')[0];
+            writeItemList = [];
+            renderWriteItems();
             validateWriteForm();
           }, 2000);
         } catch (error) {
@@ -674,7 +728,6 @@ async function writeToTag() {
           writeResult.className = 'status-bar error';
           writeResult.textContent = `❌ Write failed: ${error.message || 'Unknown error'}`;
         } finally {
-          appendDebugLine('↩️ Stopping scan session');
           await new Promise(r => setTimeout(r, 1500));
           await nfc.stopScanning();
           writeBtn.disabled = false;
@@ -687,30 +740,19 @@ async function writeToTag() {
       listenerHandles.push(await nfc.addListener('tagDiscovered', handleTag));
       listenerHandles.push(await nfc.addListener('ndefDiscovered', handleTag));
 
-      await nfc.startScanning({
-        invalidateAfterFirstRead: true,
-        androidReaderModeFlags: 15
-      });
-      appendDebugLine('   startScanning() resolved');
+      await nfc.startScanning({ invalidateAfterFirstRead: true, androidReaderModeFlags: 15 });
     } else if (hasNfcSupport()) {
-      appendDebugLine('🌐 Falling back to Web NFC (NDEFReader)');
+      appendDebugLine('🌐 Web NFC write');
       const ndef = new NDEFReader();
-
-      await ndef.write({
-        records: [{
-          recordType: "text",
-          data: content
-        }]
-      });
-      
+      await ndef.write({ records: [{ recordType: "text", data: content }] });
       addToHistory(boxName.value.trim(), boxDate.value);
-      
       writeResult.className = 'status-bar success';
-      writeResult.textContent = `✅ Written! Tap your phone to the box to read "${boxName.value.trim()}"`;
-      
+      writeResult.textContent = `✅ Written! Tap to read "${boxName.value.trim()}"`;
       setTimeout(() => {
         boxName.value = '';
         boxDate.value = new Date().toISOString().split('T')[0];
+        writeItemList = [];
+        renderWriteItems();
         validateWriteForm();
       }, 2000);
       writeBtn.disabled = false;
@@ -718,24 +760,16 @@ async function writeToTag() {
       isWriteScanning = false;
       renderRecentBoxes();
     } else {
-      appendDebugLine('⚠️ No NFC support detected on this device');
       writeResult.className = 'status-bar success';
-      writeResult.textContent = ' Saved! NFC not available in this browser. Data ready to write:';
-      const codeBlock = document.createElement('code');
-      codeBlock.style.cssText = 'background:#f0edea;padding:4px 8px;border-radius:4px;display:block;margin-top:6px;font-size:12px;';
-      codeBlock.textContent = content;
-      writeResult.appendChild(document.createElement('br'));
-      writeResult.appendChild(codeBlock);
-      
+      writeResult.textContent = '✅ Saved (NFC not available in this browser)';
       addToHistory(boxName.value.trim(), boxDate.value);
       writeBtn.disabled = false;
       writeBtn.textContent = '📱 Write to Tag';
       isWriteScanning = false;
       renderRecentBoxes();
-
     }
   } catch(err) {
-    appendDebugLine(`❌ Unhandled error: ${err.message || err}`);
+    appendDebugLine(`❌ Unhandled: ${err.message || err}`);
     writeResult.className = 'status-bar error';
     writeResult.textContent = `❌ Write failed: ${err.message || 'Unknown error'}`;
     writeBtn.disabled = false;
@@ -744,23 +778,18 @@ async function writeToTag() {
   }
 }
 
-
-
 writeBtn.addEventListener('click', writeToTag);
 
 // === NFC READ ===
 async function startReading() {
   appendDebugLine('🛰️ Read button tapped');
   if (!hasNfcSupport()) {
-    appendDebugLine('⚠️ Read aborted: no NFC support');
     readResult.style.display = 'block';
     readResult.className = 'status-bar error';
-    readResult.textContent = '❌ NFC reading not available in this browser. Use an Android device with Chrome.';
+    readResult.textContent = '❌ NFC not available in this browser. Use an Android device.';
     return;
   }
-  
   try {
-    appendDebugLine('   Starting read scan...');
     readBtn.disabled = true;
     readBtn.textContent = '⏳ Scanning...';
     readResult.style.display = 'block';
@@ -769,18 +798,14 @@ async function startReading() {
     readIcon.textContent = '📱';
     readIcon.className = 'nfc-icon nfc-pulse';
     readLabel.textContent = 'Scanning...';
-    appendDebugLine('   UI ready, awaiting read events');
+    updateResult.style.display = 'none';
 
     const nfcPlugin = getNfcPlugin();
 
     if (nfcPlugin) {
       const nfc = nfcPlugin;
-      appendDebugLine('   Native plugin available for read');
-      
       nfc.addListener('ndefDiscovered', (event) => {
-        appendDebugLine('   ndefDiscovered (read) fired');
         const tag = event.tag;
-        appendDebugLine(`      techTypes: ${JSON.stringify(tag?.techTypes || [])}`);
         let text = '';
         if (tag.ndefMessage) {
           for (const record of tag.ndefMessage) {
@@ -789,9 +814,8 @@ async function startReading() {
             }
           }
         }
-        handleReadResult(text || 'Tag read (empty)');
+        handleReadComplete(text || 'Tag read (empty)');
       });
-
       nfc.addListener('tagDiscovered', (event) => {
         const tag = event.tag;
         let text = '';
@@ -802,97 +826,64 @@ async function startReading() {
             }
           }
         }
-        handleReadResult(text || 'Tag read (empty)');
+        handleReadComplete(text || 'Tag read (empty)');
       });
 
-      function handleReadResult(text) {
-        appendDebugLine(`      decoded text: ${JSON.stringify(text)}`);
+      function handleReadComplete(text) {
+        appendDebugLine(`   decoded: ${JSON.stringify(text)}`);
         readIcon.textContent = '✅';
         readIcon.className = 'nfc-icon';
         readLabel.textContent = 'Tag read!';
         readResult.className = 'status-bar success';
-        readResult.textContent = text || 'Tag read successfully';
-        
-        lastScannedContent.innerHTML = '';
-        const lines = text.split('\n');
-        lines.forEach(line => {
-          const div = document.createElement('div');
-          if (line.startsWith('📦')) {
-            div.style.cssText = 'font-size:18px;font-weight:600;color:#3a506b;margin-bottom:4px';
-          } else if (line.startsWith('📅')) {
-            div.style.cssText = 'font-size:14px;color:#6b5e52';
-          } else if (line.startsWith('📝')) {
-            div.style.cssText = 'font-size:14px;color:#6b5e52;margin-top:4px';
-          } else {
-            div.style.cssText = 'font-size:14px;color:#1e1e24';
-          }
-          div.textContent = line;
-          lastScannedContent.appendChild(div);
-        });
-        lastScannedCard.style.display = 'block';
-        
+        readResult.textContent = 'Tag read successfully';
+
+        const data = parseTagData(text);
+        scannedBoxName = data.name;
+        scannedBoxDate = data.date;
+        scannedItems = [...data.items];
+        displayScannedBox(data.name, data.date, data.items);
+
         readBtn.disabled = false;
         readBtn.textContent = '📖 Read Another';
-        
         setTimeout(() => nfc.stopScanning(), 500);
       }
 
-      await nfc.startScanning({
-        invalidateAfterFirstRead: true,
-        androidReaderModeFlags: 15
-      });
-
+      await nfc.startScanning({ invalidateAfterFirstRead: true, androidReaderModeFlags: 15 });
     } else {
       const ndef = new NDEFReader();
       await ndef.scan();
+      ndef.addEventListener("reading", ({ message, serialNumber }) => {
+        let text = '';
+        for (const record of message.records) {
+          if (record.recordType === "text") {
+            const decoder = new TextDecoder(record.encoding || 'utf-8');
+            text += decoder.decode(record.data);
+          }
+        }
+        readIcon.textContent = '✅';
+        readIcon.className = 'nfc-icon';
+        readLabel.textContent = 'Tag read!';
+        readResult.className = 'status-bar success';
+        readResult.textContent = 'Tag read successfully';
 
-    ndef.addEventListener("reading", ({ message, serialNumber }) => {
-      let text = '';
-      for (const record of message.records) {
-        if (record.recordType === "text") {
-          const decoder = new TextDecoder(record.encoding || 'utf-8');
-          text += decoder.decode(record.data);
-        }
-      }
-      
-      readIcon.textContent = '✅';
-      readIcon.className = 'nfc-icon';
-      readLabel.textContent = 'Tag read!';
-      readResult.className = 'status-bar success';
-      readResult.textContent = text || 'Tag read successfully';
-      
-      lastScannedContent.innerHTML = '';
-      const lines = text.split('\n');
-      lines.forEach(line => {
-        const div = document.createElement('div');
-        if (line.startsWith('📦')) {
-          div.style.cssText = 'font-size:18px;font-weight:600;color:#3a506b;margin-bottom:4px';
-        } else if (line.startsWith('📅')) {
-          div.style.cssText = 'font-size:14px;color:#6b5e52';
-        } else if (line.startsWith('📝')) {
-          div.style.cssText = 'font-size:14px;color:#6b5e52;margin-top:4px';
-        } else {
-          div.style.cssText = 'font-size:14px;color:#1e1e24';
-        }
-        div.textContent = line;
-        lastScannedContent.appendChild(div);
+        const data = parseTagData(text);
+        scannedBoxName = data.name;
+        scannedBoxDate = data.date;
+        scannedItems = [...data.items];
+        displayScannedBox(data.name, data.date, data.items);
+
+        readBtn.disabled = false;
+        readBtn.textContent = '📖 Read Another';
       });
-      lastScannedCard.style.display = 'block';
-      
-      readBtn.disabled = false;
-      readBtn.textContent = '📖 Read Another';
-    });
-    
-    ndef.addEventListener("readingerror", () => {
-      readResult.className = 'status-bar error';
-      readResult.textContent = '❌ Could not read the tag. Try again.';
-      readIcon.textContent = '📱';
-      readIcon.className = 'nfc-icon';
-      readLabel.textContent = 'Tap to try again';
-      readBtn.disabled = false;
-      readBtn.textContent = '📖 Start Reading';
-    });
-    
+      ndef.addEventListener("readingerror", () => {
+        readResult.className = 'status-bar error';
+        readResult.textContent = '❌ Could not read the tag. Try again.';
+        readIcon.textContent = '📱';
+        readIcon.className = 'nfc-icon';
+        readLabel.textContent = 'Tap to try again';
+        readBtn.disabled = false;
+        readBtn.textContent = '📖 Start Reading';
+      });
     }
   } catch(err) {
     readResult.style.display = 'block';
@@ -908,6 +899,177 @@ async function startReading() {
 
 readBtn.addEventListener('click', startReading);
 
+// === DISPLAY SCANNED BOX ===
+function displayScannedBox(name, date, items) {
+  lastScannedCard.style.display = 'block';
+  lastScannedContent.innerHTML = '';
+
+  // Name
+  const nameEl = document.createElement('div');
+  nameEl.className = 'read-header';
+  nameEl.textContent = name || 'Unknown box';
+  lastScannedContent.appendChild(nameEl);
+
+  // Date
+  const dateEl = document.createElement('div');
+  dateEl.className = 'read-date';
+  dateEl.textContent = date ? `📅 ${date}` : '';
+  lastScannedContent.appendChild(dateEl);
+
+  // Items
+  if (items.length === 0) {
+    const emptyEl = document.createElement('div');
+    emptyEl.style.cssText = 'color:#9a8e82;font-size:13px;padding:20px 0;text-align:center;';
+    emptyEl.textContent = '📭 No items listed. Tap Update Tag to add some.';
+    lastScannedContent.appendChild(emptyEl);
+  } else {
+    const listEl = document.createElement('div');
+    listEl.id = 'scannedItemsList';
+    renderScannedItems(listEl);
+    lastScannedContent.appendChild(listEl);
+  }
+
+  // Add new item row
+  const addRow = document.createElement('div');
+  addRow.className = 'item-add-row';
+  addRow.style.marginTop = '12px';
+  const addInput = document.createElement('input');
+  addInput.type = 'text';
+  addInput.id = 'readAddItemInput';
+  addInput.placeholder = 'Add an item...';
+  addInput.autocomplete = 'off';
+  const addBtn = document.createElement('button');
+  addBtn.id = 'readAddItemBtn';
+  addBtn.textContent = '+ Add';
+  addBtn.addEventListener('click', () => {
+    const val = addInput.value.trim();
+    if (!val) return;
+    scannedItems.push(val);
+    addInput.value = '';
+    const listEl = document.getElementById('scannedItemsList');
+    if (listEl) renderScannedItems(listEl);
+    updateTagBtn.style.display = 'block';
+    showToast('Item added. Tap "Update Tag" to save.');
+  });
+  addInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); addBtn.click(); }
+  });
+  addRow.appendChild(addInput);
+  addRow.appendChild(addBtn);
+  lastScannedContent.appendChild(addRow);
+}
+
+function renderScannedItems(container) {
+  if (scannedItems.length === 0) {
+    container.innerHTML = '<div style="color:#9a8e82;font-size:13px;padding:20px 0;text-align:center;">📭 No items yet.</div>';
+    return;
+  }
+  container.innerHTML = scannedItems.map((item, i) =>
+    `<div class="read-item">
+      <span class="ri-text">📝 ${escapeHtml(item)}</span>
+      <button class="ri-remove" data-idx="${i}" title="Remove this item">✕</button>
+    </div>`
+  ).join('');
+  container.querySelectorAll('.ri-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      const removed = scannedItems[idx];
+      scannedItems.splice(idx, 1);
+      renderScannedItems(container);
+      updateTagBtn.style.display = 'block';
+      showToast(`"${removed}" removed. Tap "Update Tag" to save.`);
+    });
+  });
+}
+
+// === UPDATE TAG (write edited contents back) ===
+async function updateTag() {
+  if (isUpdatingTag) return;
+  if (!scannedBoxName) {
+    showToast('Read a tag first');
+    return;
+  }
+  isUpdatingTag = true;
+  updateResult.style.display = 'block';
+  updateResult.className = 'status-bar';
+  updateResult.textContent = 'Hold near tag to update...';
+  updateTagBtn.disabled = true;
+  updateTagBtn.textContent = '⏳ Updating...';
+
+  const content = buildTagData(scannedBoxName, scannedBoxDate, scannedItems);
+
+  try {
+    const nfcPlugin = getNfcPlugin();
+
+    if (nfcPlugin) {
+      const nfc = nfcPlugin;
+      const payload = buildTextPayload(content);
+      if (payload.length > MAX_NFC_BYTES) {
+        throw new Error(`Too long (${payload.length} bytes). Remove some items.`);
+      }
+
+      const listenerHandles = [];
+      const handleTag = async (event) => {
+        const tag = event?.tag;
+        try {
+          const messagePayload = Array.from(payload);
+          await nfc.write({
+            records: [{ tnf: 1, type: [0x54], id: [], payload: messagePayload, languageCode: NFC_LANGUAGE_CODE, encoding: 'utf-8' }],
+            allowFormat: true
+          });
+          updateResult.className = 'status-bar success';
+          updateResult.textContent = '✅ Tag updated!';
+          showToast('✅ Tag saved!');
+        } catch (error) {
+          updateResult.className = 'status-bar error';
+          updateResult.textContent = `❌ ${error.message || 'Write failed'}`;
+        } finally {
+          await new Promise(r => setTimeout(r, 1500));
+          await nfc.stopScanning();
+          isUpdatingTag = false;
+          updateTagBtn.disabled = false;
+          updateTagBtn.textContent = '📱 Update Tag';
+          listenerHandles.forEach(h => h.remove());
+        }
+      };
+
+      listenerHandles.push(await nfc.addListener('tagDiscovered', handleTag));
+      listenerHandles.push(await nfc.addListener('ndefDiscovered', handleTag));
+      await nfc.startScanning({ invalidateAfterFirstRead: true, androidReaderModeFlags: 15 });
+    } else if (hasNfcSupport()) {
+      const ndef = new NDEFReader();
+      await ndef.write({ records: [{ recordType: "text", data: content }] });
+      updateResult.className = 'status-bar success';
+      updateResult.textContent = '✅ Tag updated!';
+      showToast('✅ Tag saved!');
+      isUpdatingTag = false;
+      updateTagBtn.disabled = false;
+      updateTagBtn.textContent = '📱 Update Tag';
+    }
+  } catch(err) {
+    updateResult.className = 'status-bar error';
+    updateResult.textContent = `❌ ${err.message || 'Update failed'}`;
+    isUpdatingTag = false;
+    updateTagBtn.disabled = false;
+    updateTagBtn.textContent = '📱 Update Tag';
+  }
+}
+
+updateTagBtn.addEventListener('click', updateTag);
+
+readNewScanBtn.addEventListener('click', () => {
+  lastScannedCard.style.display = 'none';
+  readResult.style.display = 'none';
+  updateResult.style.display = 'none';
+  updateTagBtn.disabled = false;
+  updateTagBtn.textContent = '📱 Update Tag';
+  readBtn.textContent = '📖 Start Reading';
+  readBtn.disabled = false;
+  readIcon.textContent = '📱';
+  readIcon.className = 'nfc-icon';
+  readLabel.textContent = 'Tap your phone to an Attic Organizer sticker';
+});
+
 // === HISTORY ===
 function addToHistory(name, date) {
   history.unshift({
@@ -922,66 +1084,32 @@ function addToHistory(name, date) {
 
 function renderHistory() {
   const q = historySearch.value.toLowerCase().trim();
-  const filtered = q ? history.filter(h =>
-    h.name.toLowerCase().includes(q)
-  ) : history;
+  const filtered = q ? history.filter(h => h.name.toLowerCase().includes(q)) : history;
 
   if (filtered.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'history-empty';
-    const icon = document.createElement('span');
-    icon.className = 'he-icon';
-    icon.textContent = '📦';
-    const message = document.createTextNode(q ? 'No boxes match your search.' : 'No boxes tagged yet. Start with the Write tab!');
-    empty.appendChild(icon);
-    empty.appendChild(message);
-    historyList.innerHTML = '';
-    historyList.appendChild(empty);
+    historyList.innerHTML = `<div class="history-empty"><span class="he-icon">📦</span>${q ? 'No boxes match your search.' : 'No boxes tagged yet. Start with the Write tab!'}</div>`;
     return;
   }
 
-  const fragment = document.createDocumentFragment();
-  filtered.forEach(h => {
-    const item = document.createElement('div');
-    item.className = 'history-item';
+  historyList.innerHTML = filtered.map(h => `
+    <div class="history-item">
+      <div class="hi-content">
+        <div class="hi-name">${escapeHtml(h.name)}</div>
+        <div class="hi-date">📅 ${escapeHtml(h.date)}</div>
+        <span class="hi-tag">${escapeHtml(h.timestamp)}</span>
+      </div>
+      <button class="hi-del" data-id="${h.id}" title="Remove">✕</button>
+    </div>
+  `).join('');
 
-    const content = document.createElement('div');
-    content.className = 'hi-content';
-
-    const nameEl = document.createElement('div');
-    nameEl.className = 'hi-name';
-    nameEl.textContent = h.name;
-
-    const dateEl = document.createElement('div');
-    dateEl.className = 'hi-date';
-    dateEl.textContent = `📅 ${h.date}`;
-
-    const tagEl = document.createElement('span');
-    tagEl.className = 'hi-tag';
-    tagEl.textContent = h.timestamp;
-
-    content.appendChild(nameEl);
-    content.appendChild(dateEl);
-    content.appendChild(tagEl);
-    item.appendChild(content);
-
-    const delBtn = document.createElement('button');
-    delBtn.className = 'hi-del';
-    delBtn.textContent = '✕';
-    delBtn.title = 'Remove this box';
-    delBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (confirm(`Remove "${h.name}" from history?`)) {
-        deleteHistoryItem(h.id);
+  historyList.querySelectorAll('.hi-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = parseInt(btn.dataset.id);
+      if (confirm('Remove this box from history?')) {
+        deleteHistoryItem(id);
       }
     });
-    item.appendChild(delBtn);
-
-    fragment.appendChild(item);
   });
-
-  historyList.innerHTML = '';
-  historyList.appendChild(fragment);
 }
 
 function deleteHistoryItem(id) {
@@ -1000,25 +1128,21 @@ function renderRecentBoxes() {
     return;
   }
   recentBoxesCard.style.display = 'block';
-  recentWriteList.innerHTML = history.slice(0, 5).map(h => `
-    <div class="history-item">
+  recentWriteList.innerHTML = history.slice(0, 5).map(h =>
+    `<div class="history-item">
       <div class="hi-content">
-        <div class="hi-name">${h.name}</div>
-        <div class="hi-date">📅 ${h.date}</div>
+        <div class="hi-name">${escapeHtml(h.name)}</div>
+        <div class="hi-date">📅 ${escapeHtml(h.date)}</div>
       </div>
-    </div>
-  `).join('');
+    </div>`
+  ).join('');
 }
 
 $('exportBtn').addEventListener('click', () => {
-  if (history.length === 0) {
-    showToast('No boxes to export yet!');
-    return;
-  }
-  const csv = 'Name,Date,Timestamp\n' + history.map(h => 
-    `"${h.name.replace(/"/g,'""')}","${h.date}","${h.timestamp.replace(/"/g,'""')}"`
+  if (history.length === 0) { showToast('No boxes to export yet!'); return; }
+  const csv = 'Name,Date,Timestamp\n' + history.map(h =>
+    `"${h.name.replace(/"/g,'""')}","${h.date.replace(/"/g,'""')}","${h.timestamp.replace(/"/g,'""')}"`
   ).join('\n');
-
   const blob = new Blob([csv], {type: 'text/csv'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
