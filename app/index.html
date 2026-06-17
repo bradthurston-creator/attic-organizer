@@ -77,6 +77,15 @@ body{
 .input-group textarea{resize:vertical;min-height:180px;}
 .input-group textarea.box-contents{min-height:100px;resize:vertical;}
 
+.voice-btn-sm{
+  width:40px;height:40px;border-radius:50%;border:none;
+  background:#d4a34a;color:white;font-size:18px;
+  cursor:pointer;transition:all 0.2s;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.voice-btn-sm:hover{transform:scale(1.05);}
+.voice-btn-sm.listening{background:#c0392b;animation:pulse 1s infinite;}
+
 .voice-btn{
   width:56px;height:56px;border-radius:50%;border:none;
   background:#d4a34a;color:white;font-size:24px;
@@ -210,27 +219,41 @@ body{
         ⚡ Your browser doesn't support NFC writing. Type the contents below, then tap with an NFC writer app.
       </div>
 
-      <button class="voice-btn" id="voiceBtn" title="Speak box contents">🎤</button>
-      <div class="status-bar" id="voiceStatus">Tap the mic and describe what's in your box</div>
-
+      <!-- Location -->
       <div class="input-group">
-        <label for="boxName">Box name</label>
-        <input type="text" id="boxName" placeholder="e.g. Christmas Decorations" autocomplete="off" maxlength="120">
+        <label for="boxLocation">📍 Location</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="boxLocation" placeholder="e.g. Attic, Garage, Master closet" autocomplete="off" maxlength="80" style="flex:1;">
+          <button class="voice-btn-sm" id="voiceLocBtn" title="Speak location">🎤</button>
+        </div>
+      </div>
+
+      <!-- Box Name -->
+      <div class="input-group">
+        <label for="boxName">📦 Box name</label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="text" id="boxName" placeholder="e.g. Christmas Decorations" autocomplete="off" maxlength="120" style="flex:1;">
+          <button class="voice-btn-sm" id="voiceNameBtn" title="Speak box name">🎤</button>
+        </div>
         <div class="char-counter" id="boxNameCounter" style="font-size:12px;color:#6b5e52;margin-top:4px;">0 / 120</div>
       </div>
+
       <div class="input-group" style="max-width:160px">
-        <label for="boxDate">Date packed</label>
+        <label for="boxDate">📅 Date packed</label>
         <input type="date" id="boxDate">
       </div>
 
       <div class="input-group">
-        <label>Contents <span style="font-weight:400;color:#9a8e82;font-size:12px;">— tap + to add each item</span></label>
+        <label>📝 Contents <span style="font-weight:400;color:#9a8e82;font-size:12px;">— add each item</span></label>
         <div class="item-list" id="writeItems"></div>
         <div class="item-add-row">
           <input type="text" id="writeItemInput" placeholder="e.g. 3 strings of lights" autocomplete="off">
           <button id="writeItemAddBtn">+ Add</button>
+          <button class="voice-btn-sm" id="voiceItemsBtn" title="Speak items">🎤</button>
         </div>
       </div>
+
+      <div class="status-bar" id="voiceStatus">Hold 🎤 to speak, or type</div>
 
       <button class="btn btn-primary" id="writeBtn" disabled>📱 Write to Tag</button>
       <div id="writeResult" class="status-bar" style="margin-top:12px;display:none"></div>
@@ -309,6 +332,7 @@ let nfcReading = false;
 let isWriteScanning = false;
 let scannedBoxName = '';
 let scannedBoxDate = '';
+let scannedBoxLocation = '';
 let scannedItems = [];
 let isUpdatingTag = false;
 const MAX_BOX_LENGTH = 120;
@@ -338,21 +362,24 @@ function decodeTextPayload(payload) {
   }
 }
 
-// Parse tag text into { name, date, items[] }
+// Parse tag text into { name, location, date, items[] }
 function parseTagData(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-  let name = '', date = '', items = [];
+  let name = '', location = '', date = '', items = [];
   for (const line of lines) {
     if (line.startsWith('📦')) name = line.replace('📦', '').trim();
+    else if (line.startsWith('📍')) location = line.replace('📍', '').trim();
     else if (line.startsWith('📅')) date = line.replace('📅', '').trim();
     else if (line.startsWith('📝')) items.push(line.replace('📝', '').trim());
   }
-  return { name, date, items };
+  return { name, location, date, items };
 }
 
-// Build tag text from name, date, items
-function buildTagData(name, date, items) {
-  let text = `📦 ${name}\n📅 ${date}`;
+// Build tag text from name, location, date, items
+function buildTagData(name, location, date, items) {
+  let text = `📦 ${name}`;
+  if (location) text += `\n📍 ${location}`;
+  text += `\n📅 ${date}`;
   for (const item of items) {
     if (item.trim()) text += `\n📝 ${item.trim()}`;
   }
@@ -365,10 +392,13 @@ const writePanel = $('panel-write');
 const readPanel = $('panel-read');
 const historyPanel = $('panel-history');
 const tabs = document.querySelectorAll('.tab');
-const voiceBtn = $('voiceBtn');
-const voiceStatus = $('voiceStatus');
+const boxLocation = $('boxLocation');
 const boxName = $('boxName');
 const boxDate = $('boxDate');
+const voiceLocBtn = $('voiceLocBtn');
+const voiceNameBtn = $('voiceNameBtn');
+const voiceItemsBtn = $('voiceItemsBtn');
+const voiceStatus = $('voiceStatus');
 const writeBtn = $('writeBtn');
 const writeResult = $('writeResult');
 const writeItems = $('writeItems');
@@ -478,51 +508,85 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// === VOICE INPUT ===
+// === VOICE INPUT (3 separate mics) ===
 let recognition = null;
 let isListening = false;
+let activeMicBtn = null;
 let speechListenerHandles = [];
-let latestSpeechTranscript = '';
 
 const useCapacitorSpeech = hasCapacitorSpeech();
 const speechPlugin = useCapacitorSpeech ? getSpeechPlugin() : null;
 
-if (!useCapacitorSpeech && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+function startListening(micBtn, onResult) {
+  if (isListening) { stopListening(); return; }
+  activeMicBtn = micBtn;
+  micBtn.classList.add('listening');
+  voiceStatus.textContent = '🎤 Listening...';
+  voiceStatus.className = 'status-bar';
+
+  if (useCapacitorSpeech) {
+    handleCapacitorSpeech(onResult);
+  } else {
+    handleWebSpeech(onResult);
+  }
+}
+
+function stopListening() {
+  if (activeMicBtn) { activeMicBtn.classList.remove('listening'); activeMicBtn = null; }
+  isListening = false;
+  if (useCapacitorSpeech) {
+    cleanupSpeech();
+  } else if (recognition) {
+    try { recognition.stop(); } catch(e) {}
+  }
+  voiceStatus.textContent = 'Hold 🎤 to speak, or type';
+  voiceStatus.className = 'status-bar';
+}
+
+function handleWebSpeech(onResult) {
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    voiceStatus.textContent = '❌ Voice not available in this browser';
+    voiceStatus.className = 'status-bar error';
+    return;
+  }
   const WebkitSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new WebkitSpeechRecognition();
   recognition.continuous = false;
   recognition.interimResults = false;
   recognition.lang = 'en-US';
-  
   recognition.onresult = (e) => {
     const transcript = e.results[0][0].transcript;
     voiceStatus.textContent = '✅ Got it!';
     voiceStatus.className = 'status-bar success';
-    voiceBtn.classList.remove('listening');
-    isListening = false;
-    parseVoiceInput(transcript);
+    onResult(transcript);
+    stopListening();
   };
-  
-  recognition.onerror = (e) => {
-    voiceStatus.textContent = `❌ Voice error: ${e.error}. Try typing instead.`;
-    voiceStatus.className = 'status-bar error';
-    voiceBtn.classList.remove('listening');
-    isListening = false;
-  };
-  
-  recognition.onend = () => {
-    voiceBtn.classList.remove('listening');
-    isListening = false;
-    if (voiceStatus.className === 'status-bar') {
-      voiceStatus.textContent = 'Tap the mic to speak';
-    }
-  };
+  recognition.onerror = () => { stopListening(); };
+  recognition.onend = () => { if (activeMicBtn) stopListening(); };
+  isListening = true;
+  recognition.start();
 }
 
-voiceBtn.addEventListener('click', async () => {
-  if (useCapacitorSpeech) await handleCapacitorSpeech();
-  else await handleWebSpeech();
-});
+async function handleCapacitorSpeech(onResult) {
+  if (!speechPlugin) return;
+  try {
+    const { available } = await speechPlugin.available();
+    if (!available) { voiceStatus.textContent = '❌ Speech not available'; voiceStatus.className = 'status-bar error'; return; }
+    const granted = await ensureSpeechPermission();
+    if (!granted) { voiceStatus.textContent = '❌ Mic permission denied'; voiceStatus.className = 'status-bar error'; return; }
+    cleanupSpeech();
+    speechListenerHandles.push(await speechPlugin.addListener('partialResults', event => {
+      const transcript = event.matches && event.matches[0];
+      if (transcript) { voiceStatus.textContent = '✅ Got it!'; voiceStatus.className = 'status-bar success'; onResult(transcript); stopListening(); }
+    }));
+    speechListenerHandles.push(await speechPlugin.addListener('error', () => { stopListening(); }));
+    speechListenerHandles.push(await speechPlugin.addListener('readyForNextSession', () => { stopListening(); }));
+    await speechPlugin.start({ language: 'en-US', partialResults: true, popup: false, addPunctuation: true, maxResults: 3, allowForSilence: 3000 });
+    isListening = true;
+  } catch (err) {
+    stopListening();
+  }
+}
 
 async function ensureSpeechPermission() {
   if (!speechPlugin) return false;
@@ -532,77 +596,38 @@ async function ensureSpeechPermission() {
   return (requested?.speechRecognition || '').toLowerCase() === 'granted';
 }
 
-async function handleCapacitorSpeech() {
-  if (!speechPlugin) return;
-  if (isListening) { await speechPlugin.stop(); cleanupSpeech(); return; }
-  try {
-    const { available } = await speechPlugin.available();
-    if (!available) {
-      voiceStatus.textContent = '❌ Speech recognition not available on this device.';
-      voiceStatus.className = 'status-bar error';
-      return;
-    }
-    const granted = await ensureSpeechPermission();
-    if (!granted) {
-      voiceStatus.textContent = '❌ Microphone permission denied. Check Settings → Apps → Attic Organizer → Permissions.';
-      voiceStatus.className = 'status-bar error';
-      return;
-    }
-    cleanupSpeech();
-    speechListenerHandles.push(await speechPlugin.addListener('partialResults', event => {
-      const transcript = event.matches && event.matches[0];
-      if (!transcript) return;
-      latestSpeechTranscript = transcript;
-      voiceStatus.textContent = '✅ Got it!';
-      voiceStatus.className = 'status-bar success';
-      parseVoiceInput(transcript);
-    }));
-    speechListenerHandles.push(await speechPlugin.addListener('error', event => {
-      voiceStatus.textContent = `❌ Voice error: ${event.message || event.code || 'Unknown error'}`;
-      voiceStatus.className = 'status-bar error';
-      cleanupSpeech();
-    }));
-    speechListenerHandles.push(await speechPlugin.addListener('readyForNextSession', () => { cleanupSpeech(); }));
-    await speechPlugin.start({ language: 'en-US', partialResults: true, popup: false, addPunctuation: true, maxResults: 3, allowForSilence: 3000 });
-    isListening = true;
-    voiceBtn.classList.add('listening');
-    voiceStatus.textContent = '🎤 Listening...';
-    voiceStatus.className = 'status-bar';
-  } catch (err) {
-    cleanupSpeech();
-    voiceStatus.textContent = `❌ Voice error: ${err.message || 'Unknown error'}`;
-    voiceStatus.className = 'status-bar error';
-  }
-}
-
-async function handleWebSpeech() {
-  if (!recognition) {
-    voiceStatus.textContent = '❌ Voice input not available in this browser. Try Chrome on Android.';
-    voiceStatus.className = 'status-bar error';
-    return;
-  }
-  if (isListening) { recognition.stop(); return; }
-  try {
-    recognition.start();
-    isListening = true;
-    voiceBtn.classList.add('listening');
-    voiceStatus.textContent = '🎤 Listening...';
-    voiceStatus.className = 'status-bar';
-  } catch(e) {
-    voiceStatus.textContent = `❌ Speech error: ${e.message || 'Unknown error'}`;
-    voiceStatus.className = 'status-bar error';
-  }
-}
-
 function cleanupSpeech() {
   isListening = false;
-  voiceBtn.classList.remove('listening');
   speechListenerHandles.forEach(h => h.remove());
   speechListenerHandles = [];
   speechPlugin?.stop?.().catch(() => {});
 }
 
-function parseVoiceInput(text) {
+voiceLocBtn.addEventListener('click', () => {
+  startListening(voiceLocBtn, (transcript) => {
+    boxLocation.value = transcript.charAt(0).toUpperCase() + transcript.slice(1);
+    validateWriteForm();
+  });
+});
+
+voiceNameBtn.addEventListener('click', () => {
+  startListening(voiceNameBtn, (transcript) => {
+    boxName.value = transcript.charAt(0).toUpperCase() + transcript.slice(1);
+    boxName.dispatchEvent(new Event('input'));
+    validateWriteForm();
+  });
+});
+
+voiceItemsBtn.addEventListener('click', () => {
+  startListening(voiceItemsBtn, (transcript) => {
+    const parts = transcript.split(/[,;.]+/).map(p => p.trim()).filter(p => p);
+    const newItems = parts.map(p => p.charAt(0).toUpperCase() + p.slice(1));
+    writeItemList.push(...newItems);
+    renderWriteItems();
+    validateWriteForm();
+    showToast(`+${newItems.length} item${newItems.length > 1 ? 's' : ''} added`);
+  });
+});
   const today = new Date();
   let dateStr = boxDate.value;
   const datePatterns = [
@@ -665,7 +690,7 @@ function parseVoiceInput(text) {
 // === VALIDATE WRITE FORM ===
 function validateWriteForm() {
   const trimmed = boxName.value.trim();
-  writeBtn.disabled = !trimmed;
+  writeBtn.disabled = !trimmed || !boxLocation.value.trim();
   $('boxNameCounter').textContent = `${trimmed.length} / 120`;
 }
 boxName.addEventListener('input', validateWriteForm);
@@ -685,8 +710,9 @@ async function writeToTag() {
   writeResult.textContent = 'Hold your phone near the Attic Organizer sticker...';
 
   const name = boxName.value.trim().slice(0, MAX_BOX_LENGTH);
+  const loc = boxLocation.value.trim();
   boxName.value = name;
-  const content = buildTagData(name, boxDate.value, writeItemList);
+  const content = buildTagData(name, loc, boxDate.value, writeItemList);
 
   try {
     const nfcPlugin = getNfcPlugin();
@@ -722,11 +748,12 @@ async function writeToTag() {
             allowFormat: true
           });
           appendDebugLine('   write() succeeded');
-          addToHistory(name, boxDate.value);
+          addToHistory(name, loc, boxDate.value);
           writeResult.className = 'status-bar success';
           writeResult.textContent = `✅ Written! Tap to read "${name}"`;
           setTimeout(() => {
             boxName.value = '';
+            boxLocation.value = '';
             boxDate.value = new Date().toISOString().split('T')[0];
             writeItemList = [];
             renderWriteItems();
@@ -754,7 +781,7 @@ async function writeToTag() {
       appendDebugLine('🌐 Web NFC write');
       const ndef = new NDEFReader();
       await ndef.write({ records: [{ recordType: "text", data: content }] });
-      addToHistory(boxName.value.trim(), boxDate.value);
+      addToHistory(boxName.value.trim(), boxLocation.value.trim(), boxDate.value);
       writeResult.className = 'status-bar success';
       writeResult.textContent = `✅ Written! Tap to read "${boxName.value.trim()}"`;
       setTimeout(() => {
@@ -771,7 +798,7 @@ async function writeToTag() {
     } else {
       writeResult.className = 'status-bar success';
       writeResult.textContent = '✅ Saved (NFC not available in this browser)';
-      addToHistory(boxName.value.trim(), boxDate.value);
+      addToHistory(boxName.value.trim(), boxLocation.value.trim(), boxDate.value);
       writeBtn.disabled = false;
       writeBtn.textContent = '📱 Write to Tag';
       isWriteScanning = false;
@@ -848,9 +875,10 @@ async function startReading() {
 
         const data = parseTagData(text);
         scannedBoxName = data.name;
+        scannedBoxLocation = data.location;
         scannedBoxDate = data.date;
         scannedItems = [...data.items];
-        displayScannedBox(data.name, data.date, data.items);
+        displayScannedBox(data.name, data.location, data.date, data.items);
 
         readBtn.disabled = false;
         readBtn.textContent = '📖 Read Another';
@@ -859,27 +887,28 @@ async function startReading() {
 
       await nfc.startScanning({ invalidateAfterFirstRead: true, androidReaderModeFlags: 15 });
     } else {
-      const ndef = new NDEFReader();
-      await ndef.scan();
-      ndef.addEventListener("reading", ({ message, serialNumber }) => {
-        let text = '';
-        for (const record of message.records) {
-          if (record.recordType === "text") {
-            const decoder = new TextDecoder(record.encoding || 'utf-8');
-            text += decoder.decode(record.data);
-          }
-        }
-        readIcon.textContent = '✅';
-        readIcon.className = 'nfc-icon';
-        readLabel.textContent = 'Tag read!';
-        readResult.className = 'status-bar success';
-        readResult.textContent = 'Tag read successfully';
+              const ndef = new NDEFReader();
+              await ndef.scan();
+              ndef.addEventListener("reading", ({ message, serialNumber }) => {
+                let text = '';
+                for (const record of message.records) {
+                  if (record.recordType === "text") {
+                    const decoder = new TextDecoder(record.encoding || 'utf-8');
+                    text += decoder.decode(record.data);
+                  }
+                }
+                readIcon.textContent = '✅';
+                readIcon.className = 'nfc-icon';
+                readLabel.textContent = 'Tag read!';
+                readResult.className = 'status-bar success';
+                readResult.textContent = 'Tag read successfully';
 
-        const data = parseTagData(text);
-        scannedBoxName = data.name;
-        scannedBoxDate = data.date;
-        scannedItems = [...data.items];
-        displayScannedBox(data.name, data.date, data.items);
+                const data = parseTagData(text);
+                scannedBoxName = data.name;
+                scannedBoxLocation = data.location;
+                scannedBoxDate = data.date;
+                scannedItems = [...data.items];
+                displayScannedBox(data.name, data.location, data.date, data.items);
 
         readBtn.disabled = false;
         readBtn.textContent = '📖 Read Another';
@@ -909,9 +938,17 @@ async function startReading() {
 readBtn.addEventListener('click', startReading);
 
 // === DISPLAY SCANNED BOX ===
-function displayScannedBox(name, date, items) {
+function displayScannedBox(name, location, date, items) {
   lastScannedCard.style.display = 'block';
   lastScannedContent.innerHTML = '';
+
+  // Location
+  if (location) {
+    const locEl = document.createElement('div');
+    locEl.style.cssText = 'font-size:13px;color:#d4a34a;font-weight:500;margin-bottom:4px;';
+    locEl.textContent = `📍 ${location}`;
+    lastScannedContent.appendChild(locEl);
+  }
 
   // Name
   const nameEl = document.createElement('div');
@@ -1005,7 +1042,7 @@ async function updateTag() {
   updateTagBtn.disabled = true;
   updateTagBtn.textContent = '⏳ Updating...';
 
-  const content = buildTagData(scannedBoxName, scannedBoxDate, scannedItems);
+  const content = buildTagData(scannedBoxName, scannedBoxLocation, scannedBoxDate, scannedItems);
 
   try {
     const nfcPlugin = getNfcPlugin();
@@ -1080,10 +1117,11 @@ readNewScanBtn.addEventListener('click', () => {
 });
 
 // === HISTORY ===
-function addToHistory(name, date) {
+function addToHistory(name, location, date) {
   history.unshift({
     id: Date.now(),
     name,
+    location,
     date,
     timestamp: new Date().toLocaleString()
   });
@@ -1104,7 +1142,7 @@ function renderHistory() {
     <div class="history-item">
       <div class="hi-content">
         <div class="hi-name">${escapeHtml(h.name)}</div>
-        <div class="hi-date">📅 ${escapeHtml(h.date)}</div>
+        <div class="hi-date">📅 ${escapeHtml(h.date)}${h.location ? ` &middot; 📍 ${escapeHtml(h.location)}` : ''}</div>
         <span class="hi-tag">${escapeHtml(h.timestamp)}</span>
       </div>
       <button class="hi-del" data-id="${h.id}" title="Remove">✕</button>
@@ -1141,7 +1179,7 @@ function renderRecentBoxes() {
     `<div class="history-item">
       <div class="hi-content">
         <div class="hi-name">${escapeHtml(h.name)}</div>
-        <div class="hi-date">📅 ${escapeHtml(h.date)}</div>
+        <div class="hi-date">📅 ${escapeHtml(h.date)}${h.location ? ` &middot; 📍 ${escapeHtml(h.location)}` : ''}</div>
       </div>
     </div>`
   ).join('');
@@ -1149,8 +1187,8 @@ function renderRecentBoxes() {
 
 $('exportBtn').addEventListener('click', () => {
   if (history.length === 0) { showToast('No boxes to export yet!'); return; }
-  const csv = 'Name,Date,Timestamp\n' + history.map(h =>
-    `"${h.name.replace(/"/g,'""')}","${h.date.replace(/"/g,'""')}","${h.timestamp.replace(/"/g,'""')}"`
+  const csv = 'Name,Location,Date,Timestamp\n' + history.map(h =>
+    `"${h.name.replace(/"/g,'""')}","${(h.location||'').replace(/"/g,'""')}","${h.date.replace(/"/g,'""')}","${h.timestamp.replace(/"/g,'""')}"`
   ).join('\n');
   const blob = new Blob([csv], {type: 'text/csv'});
   const url = URL.createObjectURL(blob);
