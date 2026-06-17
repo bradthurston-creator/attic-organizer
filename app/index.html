@@ -38,6 +38,7 @@ body{
 .tab{
   flex:1;padding:12px;text-align:center;font-weight:500;font-size:14px;
   cursor:pointer;border:none;background:transparent;color:#6b5e52;transition:all 0.2s;
+  white-space:nowrap;
 }
 .tab.active{background:#3a506b;color:white;}
 .tab:not(.active):hover{background:#d5cec7;}
@@ -770,7 +771,7 @@ async function writeToTag() {
             allowFormat: true
           });
           appendDebugLine('   write() succeeded');
-          addToHistory(name, loc, boxDate.value);
+          addToHistory(name, loc, boxDate.value, writeItemList);
           writeResult.className = 'status-bar success';
           writeResult.textContent = `✅ Written! Tap to read "${name}"`;
           setTimeout(() => {
@@ -805,7 +806,7 @@ async function writeToTag() {
       appendDebugLine('🌐 Web NFC write');
       const ndef = new NDEFReader();
       await ndef.write({ records: [{ recordType: "text", data: content }] });
-      addToHistory(boxName.value.trim(), boxLocation.value.trim(), boxDate.value);
+      addToHistory(boxName.value.trim(), boxLocation.value.trim(), boxDate.value, writeItemList);
       writeResult.className = 'status-bar success';
       writeResult.textContent = `✅ Written! Tap to read "${boxName.value.trim()}"`;
       setTimeout(() => {
@@ -822,7 +823,7 @@ async function writeToTag() {
     } else {
       writeResult.className = 'status-bar success';
       writeResult.textContent = '✅ Saved (NFC not available in this browser)';
-      addToHistory(boxName.value.trim(), boxLocation.value.trim(), boxDate.value);
+      addToHistory(boxName.value.trim(), boxLocation.value.trim(), boxDate.value, writeItemList);
       writeBtn.disabled = false;
       writeBtn.textContent = '📱 Write to Tag';
       isWriteScanning = false;
@@ -1029,11 +1030,8 @@ function displayScannedBox(name, location, date, items) {
   const readAddMicBtn = document.createElement('button');
   readAddMicBtn.className = 'mic-btn';
   readAddMicBtn.textContent = '🎤';
-  readAddMicBtn.addEventListener('click', async () => {
-    readAddMicBtn.textContent = '🔴';
-    readAddMicBtn.disabled = true;
-    try {
-      const text = await recognizeSpeech();
+  readAddMicBtn.addEventListener('click', () => {
+    startListening(readAddMicBtn, (text) => {
       if (text && text.trim()) {
         scannedItems.push(text.trim());
         addInput.value = '';
@@ -1042,12 +1040,7 @@ function displayScannedBox(name, location, date, items) {
         updateTagBtn.style.display = 'block';
         showToast('Item added. Tap "Update Tag" to save.');
       }
-    } catch (err) {
-      showToast('Voice input failed: ' + err.message);
-    } finally {
-      readAddMicBtn.textContent = '🎤';
-      readAddMicBtn.disabled = false;
-    }
+    });
   });
   addRow.appendChild(readAddMicBtn);
   addRow.appendChild(addBtn);
@@ -1206,12 +1199,13 @@ readEditSaveBtn.addEventListener('click', () => {
 });
 
 // === HISTORY ===
-function addToHistory(name, location, date) {
+function addToHistory(name, location, date, items) {
   history.unshift({
     id: Date.now(),
     name,
     location,
     date,
+    items: items || [],
     timestamp: new Date().toLocaleString()
   });
   localStorage.setItem('atticOrganizerHistory', JSON.stringify(history));
