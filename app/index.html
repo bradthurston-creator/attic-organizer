@@ -484,6 +484,10 @@ if (nfcTest) {
   if (nfcTest.getStatus) {
     nfcTest.getStatus().then(s => appendDebugLine(`   NFC status: ${JSON.stringify(s)}`)).catch(() => {});
   }
+  // Quick bridge test: call isSupported
+  if (nfcTest.isSupported) {
+    nfcTest.isSupported().then(s => appendDebugLine(`   isSupported: ${JSON.stringify(s)}`)).catch(e => appendDebugLine(`   isSupported ERROR: ${e}`));
+  }
 }
 
 appendDebugLine(`🌐 hasNativeNfc: ${hasNativeNfc()}`);
@@ -782,7 +786,7 @@ async function writeToTag() {
           writeResult.textContent = `❌ Write failed: ${error.message || 'Unknown error'}`;
         } finally {
           await new Promise(r => setTimeout(r, 1500));
-          await nfc.stopScanning();
+          await nfc.stopForegroundScan();
           writeBtn.disabled = false;
           writeBtn.textContent = '📱 Write to Tag';
           isWriteScanning = false;
@@ -793,8 +797,8 @@ async function writeToTag() {
       listenerHandles.push(await nfc.addListener('tagDiscovered', handleTag));
       appendDebugLine('   listener registered, calling startScanning...');
 
-      await nfc.startScanning({ invalidateAfterFirstRead: true, androidReaderModeFlags: 2319 });
-      appendDebugLine('   startScanning resolved, waiting for tag...');
+      await nfc.startForegroundScan();
+      appendDebugLine('   foreground scan started, waiting for tag...');
     } else if (hasNfcSupport()) {
       appendDebugLine('🌐 Web NFC write');
       const ndef = new NDEFReader();
@@ -900,10 +904,10 @@ async function startReading() {
 
         readBtn.disabled = false;
         readBtn.textContent = '📖 Read Another';
-        setTimeout(() => nfc.stopScanning(), 500);
+        setTimeout(() => nfc.stopForegroundScan(), 500);
       }
 
-      await nfc.startScanning({ invalidateAfterFirstRead: true, androidReaderModeFlags: 2319 });
+      await nfc.startForegroundScan();
     } else {
               const ndef = new NDEFReader();
               await ndef.scan();
@@ -1095,7 +1099,7 @@ async function updateTag() {
           updateResult.textContent = `❌ ${error.message || 'Write failed'}`;
         } finally {
           await new Promise(r => setTimeout(r, 1500));
-          await nfc.stopScanning();
+          await nfc.stopForegroundScan();
           isUpdatingTag = false;
           updateTagBtn.disabled = false;
           updateTagBtn.textContent = '📱 Update Tag';
@@ -1104,7 +1108,7 @@ async function updateTag() {
       };
 
       listenerHandles.push(await nfc.addListener('tagDiscovered', handleTag));
-      await nfc.startScanning({ invalidateAfterFirstRead: true, androidReaderModeFlags: 2319 });
+      await nfc.startForegroundScan();
     } else if (hasNfcSupport()) {
       const ndef = new NDEFReader();
       await ndef.write({ records: [{ recordType: "text", data: content }] });

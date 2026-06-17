@@ -1,0 +1,16 @@
+{
+  "name": "attic-organizer-nfc",
+  "version": "1.0.0",
+  "description": "Attic Organizer NFC Plugin",
+  "main": "dist/plugin.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "capacitor": {
+    "android": {
+      "src": "android"
+    }
+  },
+  "scripts": {
+    "build": "echo 'no build needed'"
+  }
+}
