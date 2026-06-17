@@ -1019,6 +1019,31 @@ function displayScannedBox(name, location, date, items) {
     if (e.key === 'Enter') { e.preventDefault(); addBtn.click(); }
   });
   addRow.appendChild(addInput);
+  // Add mic button for voice input on Add
+  const readAddMicBtn = document.createElement('button');
+  readAddMicBtn.className = 'mic-btn';
+  readAddMicBtn.textContent = '🎤';
+  readAddMicBtn.addEventListener('click', async () => {
+    readAddMicBtn.textContent = '🔴';
+    readAddMicBtn.disabled = true;
+    try {
+      const text = await recognizeSpeech();
+      if (text && text.trim()) {
+        scannedItems.push(text.trim());
+        addInput.value = '';
+        const listEl = document.getElementById('scannedItemsList');
+        if (listEl) renderScannedItems(listEl);
+        updateTagBtn.style.display = 'block';
+        showToast('Item added. Tap "Update Tag" to save.');
+      }
+    } catch (err) {
+      showToast('Voice input failed: ' + err.message);
+    } finally {
+      readAddMicBtn.textContent = '🎤';
+      readAddMicBtn.disabled = false;
+    }
+  });
+  addRow.appendChild(readAddMicBtn);
   addRow.appendChild(addBtn);
   lastScannedContent.appendChild(addRow);
 }
@@ -1105,7 +1130,7 @@ async function updateTag() {
 
       listenerHandles.push(await nfc.addListener('tagDiscovered', handleTag));
       listenerHandles.push(await nfc.addListener('ndefDiscovered', handleTag));
-      await nfc.startScanning({ invalidateAfterFirstRead: true, androidReaderModeFlags: 15 });
+      await nfc.startScanning({ androidReaderModeFlags: 15 });
     } else if (hasNfcSupport()) {
       const ndef = new NDEFReader();
       await ndef.write({ records: [{ recordType: "text", data: content }] });
