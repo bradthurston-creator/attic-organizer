@@ -638,15 +638,24 @@ function parseVoiceInput(text) {
     .replace(/^(made|put|boxed|stored|packed|sorted|saved)\s+/i, '')
     .replace(/\s+/g, ' ').trim();
   
-  // Split voice input into items
+  // Split into items on commas, periods, semicolons
   const parts = clean.split(/[,;.]+/).map(p => p.trim()).filter(p => p);
-  if (parts.length > 1) {
-    const first = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
-    boxName.value = first;
+  
+  const alreadyHasName = boxName.value.trim().length > 0;
+
+  if (alreadyHasName) {
+    // Box name is already set — only add items, don't touch the name
+    const newItems = parts.map(p => p.charAt(0).toUpperCase() + p.slice(1));
+    writeItemList.push(...newItems);
+  } else if (parts.length > 1) {
+    // No name yet — first part becomes the name, rest are items
+    boxName.value = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
     writeItemList = parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1));
   } else {
+    // Single thing said — set as box name
     boxName.value = clean.charAt(0).toUpperCase() + clean.slice(1);
   }
+  
   boxName.dispatchEvent(new Event('input'));
   boxDate.value = dateStr;
   renderWriteItems();
