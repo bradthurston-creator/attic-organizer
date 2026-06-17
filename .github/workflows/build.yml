@@ -30,6 +30,10 @@ jobs:
           cd capacitor
           npm install
 
+      - name: Apply NFC plugin patch
+        run: |
+          cp patches/CapacitorNfcPlugin.java capacitor/node_modules/@capgo/capacitor-nfc/android/src/main/java/app/capgo/nfc/CapacitorNfcPlugin.java
+
       - name: Sync Capacitor
         run: |
           cd capacitor
