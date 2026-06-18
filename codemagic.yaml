@@ -31,11 +31,14 @@ workflows:
       vars:
         APP_ID: com.atticorganizer.app
         APP_NAME: Attic Organizer
+        APP_STORE_CONNECT_ISSUER_ID: ""
+        APP_STORE_CONNECT_KEY_IDENTIFIER: ""
+        DEVELOPMENT_TEAM: ""
+      groups:
+        - apple_credentials
       node: latest
       xcode: latest
       cocoapods: default
-      groups:
-        - apple_credentials
 
     scripts:
       - name: Install npm dependencies
@@ -56,6 +59,8 @@ workflows:
             --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
             --create
           keychain add-certificates
+          xcode-project use-profiles
+          # Copy profile to MobileDevice for xcodebuild export
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/"*.mobileprovision \
              "$HOME/Library/MobileDevice/Provisioning Profiles/"
@@ -68,7 +73,6 @@ workflows:
             -sdk iphoneos \
             -configuration Release \
             -archivePath /tmp/xcarchive/App.xcarchive \
-            DEVELOPMENT_TEAM=DN52659LL2 \
             -allowProvisioningUpdates \
             archive
 
@@ -79,7 +83,6 @@ workflows:
             -archivePath /tmp/xcarchive/App.xcarchive \
             -exportPath /tmp/ipa \
             -exportOptionsPlist capacitor/ios/exportOptions.plist \
-            DEVELOPMENT_TEAM=DN52659LL2 \
             -allowProvisioningUpdates
 
     artifacts:
