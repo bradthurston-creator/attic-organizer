@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>HarvestTag</string>
+        <string>Attic Organizer</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -48,9 +48,9 @@
 		<key>UIViewControllerBasedStatusBarAppearance</key>
 		<true/>
 		<key>NSMicrophoneUsageDescription</key>
-		<string>Harvest Tag uses the microphone to capture voice input for naming and describing your jar contents hands-free.</string>
+		<string>Attic Organizer uses the microphone to capture voice input for naming and describing box contents hands-free.</string>
 		<key>NSSpeechRecognitionUsageDescription</key>
-		<string>Speech recognition lets you quickly log jar contents by speaking instead of typing.</string>
+		<string>Speech recognition lets you quickly log box contents by speaking instead of typing.</string>
 		<key>ITSAppUsesNonExemptEncryption</key>
 		<false/>
 	</dict>

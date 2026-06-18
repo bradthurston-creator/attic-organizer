@@ -21,3 +21,73 @@ workflows:
       email:
         recipients:
           - brad.thurston@gmail.com
+
+  ios-build:
+    name: iOS Build + TestFlight
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+
+    environment:
+      vars:
+        APP_ID: com.atticorganizer.app
+        APP_NAME: Attic Organizer
+      node: latest
+      xcode: latest
+      cocoapods: default
+      groups:
+        - apple_credentials
+
+    scripts:
+      - name: Install npm dependencies
+        script: |
+          cd capacitor
+          npm install
+
+      - name: Sync Capacitor with iOS
+        script: |
+          cd capacitor
+          npx cap sync ios
+
+      - name: Set up keychain and code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files $APP_ID \
+            --type IOS_APP_STORE \
+            --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Build iOS app
+        script: |
+          cd capacitor/ios/App
+          xcodebuild -project App.xcodeproj \
+            -scheme App \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath /tmp/xcarchive/App.xcarchive \
+            -allowProvisioningUpdates \
+            DEVELOPMENT_TEAM=DN52659LL2 \
+            archive
+
+      - name: Export IPA
+        script: |
+          mkdir -p /tmp/ipa
+          xcodebuild -exportArchive \
+            -archivePath /tmp/xcarchive/App.xcarchive \
+            -exportPath /tmp/ipa \
+            -exportOptionsPlist capacitor/ios/exportOptions.plist \
+            -allowProvisioningUpdates
+
+    artifacts:
+      - /tmp/xcarchive/*.xcarchive
+      - /tmp/ipa/*.ipa
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
+      email:
+        recipients:
+          - brad.thurston@gmail.com
