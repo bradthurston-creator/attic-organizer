@@ -55,6 +55,10 @@ workflows:
             --type IOS_APP_STORE \
             --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
             --create
+          app-store-connect fetch-signing-files $APP_ID \
+            --type IOS_APP_DEVELOPMENT \
+            --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
+            --create
           keychain add-certificates
           xcode-project use-profiles
 
@@ -66,7 +70,6 @@ workflows:
             -sdk iphoneos \
             -configuration Release \
             -archivePath /tmp/xcarchive/App.xcarchive \
-            -allowProvisioningUpdates \
             DEVELOPMENT_TEAM=DN52659LL2 \
             archive
 
@@ -76,8 +79,7 @@ workflows:
           xcodebuild -exportArchive \
             -archivePath /tmp/xcarchive/App.xcarchive \
             -exportPath /tmp/ipa \
-            -exportOptionsPlist capacitor/ios/exportOptions.plist \
-            -allowProvisioningUpdates
+            -exportOptionsPlist capacitor/ios/exportOptions.plist
 
     artifacts:
       - /tmp/xcarchive/*.xcarchive
