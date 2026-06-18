@@ -71,6 +71,7 @@ workflows:
             -configuration Release \
             -archivePath /tmp/xcarchive/App.xcarchive \
             DEVELOPMENT_TEAM=DN52659LL2 \
+            -allowProvisioningUpdates \
             archive
 
       - name: Export IPA
