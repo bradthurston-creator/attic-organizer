@@ -31,9 +31,9 @@ workflows:
       vars:
         APP_ID: com.atticorganizer.app
         APP_NAME: Attic Organizer
-        APP_STORE_CONNECT_ISSUER_ID: ""
-        APP_STORE_CONNECT_KEY_IDENTIFIER: ""
-        DEVELOPMENT_TEAM: ""
+        APP_STORE_CONNECT_ISSUER_ID: fa233451-1f0a-4677-baac-21185e4cb1ec
+        APP_STORE_CONNECT_KEY_IDENTIFIER: 2NBS93SRAY
+        DEVELOPMENT_TEAM: DN52659LL2
       groups:
         - apple_credentials
       node: latest
