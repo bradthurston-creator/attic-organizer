@@ -56,7 +56,10 @@ workflows:
             --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
             --create
           keychain add-certificates
-          xcode-project use-profiles
+          # Copy profile to MobileDevice for export
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/"*.mobileprovision \
+             "$HOME/Library/MobileDevice/Provisioning Profiles/"
 
       - name: Build iOS app
         script: |
