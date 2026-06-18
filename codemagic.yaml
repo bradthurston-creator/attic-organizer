@@ -73,7 +73,6 @@ workflows:
             -sdk iphoneos \
             -configuration Release \
             -archivePath /tmp/xcarchive/App.xcarchive \
-            -allowProvisioningUpdates \
             archive
 
       - name: Export IPA
