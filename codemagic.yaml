@@ -30,14 +30,12 @@ workflows:
     environment:
       vars:
         APP_ID: com.atticorganizer.app
-        APP_STORE_CONNECT_KEY_IDENTIFIER: 2NBS93SRAY
-        APP_STORE_CONNECT_ISSUER_ID: fa233451-1f0a-4677-baac-21185e4cb1ec
-        DEVELOPMENT_TEAM: DN52659LL2
-      groups:
-        - apple_credentials
+        APP_NAME: Attic Organizer
       node: latest
       xcode: latest
       cocoapods: default
+      groups:
+        - apple_credentials
 
     scripts:
       - name: Install npm dependencies
@@ -53,15 +51,9 @@ workflows:
       - name: Set up keychain and code signing
         script: |
           keychain initialize
-          echo "$CERTIFICATE_PRIVATE_KEY" | base64 -d > /tmp/cert.key
-          echo "$APP_STORE_CONNECT_PRIVATE_KEY" | base64 -d > /tmp/asc.p8
-          app-store-connect fetch-signing-files \
-            $APP_ID \
+          app-store-connect fetch-signing-files $APP_ID \
             --type IOS_APP_STORE \
-            --issuer-id $APP_STORE_CONNECT_ISSUER_ID \
-            --key-id $APP_STORE_CONNECT_KEY_IDENTIFIER \
-            --private-key @file:/tmp/asc.p8 \
-            --certificate-key @file:/tmp/cert.key \
+            --certificate-key @env:CERTIFICATE_PRIVATE_KEY \
             --create
           keychain add-certificates
           xcode-project use-profiles
@@ -69,7 +61,6 @@ workflows:
       - name: Build iOS app
         script: |
           cd capacitor/ios/App
-          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $APP_ID" App/Info.plist
           xcodebuild -project App.xcodeproj \
             -scheme App \
             -sdk iphoneos \
@@ -93,9 +84,8 @@ workflows:
 
     publishing:
       app_store_connect:
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        auth: API_KEY
+        api_key_name: Codemagic
         submit_to_testflight: true
         submit_to_app_store: false
       email:
