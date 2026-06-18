@@ -296,11 +296,17 @@ body{
       <div id="readEditFields" style="display:none;margin-top:12px;">
         <div class="input-group">
           <label>📍 Location</label>
-          <input type="text" id="readEditLocation" maxlength="80" placeholder="Location">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" id="readEditLocation" maxlength="80" placeholder="Location" style="flex:1;">
+            <button class="voice-btn-sm" id="readEditLocMic" title="Speak location">🎤</button>
+          </div>
         </div>
         <div class="input-group">
           <label>📦 Box name</label>
-          <input type="text" id="readEditName" maxlength="120" placeholder="Box name">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" id="readEditName" maxlength="120" placeholder="Box name" style="flex:1;">
+            <button class="voice-btn-sm" id="readEditNameMic" title="Speak box name">🎤</button>
+          </div>
         </div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-sm btn-success" id="readEditSaveBtn" style="flex:1;">✅ Save</button>
@@ -1182,6 +1188,18 @@ readEditBtn.addEventListener('click', () => {
 readEditCancelBtn.addEventListener('click', () => {
   readEditFields.style.display = 'none';
   readEditBtn.style.display = 'block';
+});
+
+readEditLocMic.addEventListener('click', () => {
+  startListening(readEditLocMic, (text) => {
+    if (text) readEditLocation.value = text.trim();
+  });
+});
+
+readEditNameMic.addEventListener('click', () => {
+  startListening(readEditNameMic, (text) => {
+    if (text) readEditName.value = text.trim();
+  });
 });
 
 readEditSaveBtn.addEventListener('click', () => {
