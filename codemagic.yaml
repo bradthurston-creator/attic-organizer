@@ -79,7 +79,8 @@ workflows:
           xcodebuild -exportArchive \
             -archivePath /tmp/xcarchive/App.xcarchive \
             -exportPath /tmp/ipa \
-            -exportOptionsPlist capacitor/ios/exportOptions.plist
+            -exportOptionsPlist capacitor/ios/exportOptions.plist \
+            -allowProvisioningUpdates
 
     artifacts:
       - /tmp/xcarchive/*.xcarchive
