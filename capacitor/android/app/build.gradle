@@ -7,17 +7,25 @@ if (keystorePropsFile.exists()) {
     keystoreProps.load(new FileInputStream(keystorePropsFile))
 }
 
-// Or from environment variables (CI builds - GitHub Actions)
-def keystoreFile = keystoreProps['storeFile'] ? rootProject.file(keystoreProps['storeFile']) : null
-def keystorePass = keystoreProps['storePassword'] ?: System.getenv('KEYSTORE_PASSWORD')
-def keyAlias = keystoreProps['keyAlias'] ?: System.getenv('KEY_ALIAS')
-def keyPass = keystoreProps['keyPassword'] ?: System.getenv('KEY_PASSWORD')
+// Try env vars (CI builds), fall back to properties
+def keystoreFileVal = null
+def keystorePassVal = null
+def keyAliasVal = null
+def keyPassVal = null
 
-// Decode keystore from env if provided (CI)
-if (System.getenv('KEYSTORE_BASE64') != null) {
-    def decodedBytes = System.getenv('KEYSTORE_BASE64').decodeBase64()
-    keystoreFile = rootProject.file('signing.keystore')
-    keystoreFile.withOutputStream { it.write(decodedBytes) }
+// CI: keystore file written by workflow, passwords from env
+if (System.getenv('KEYSTORE_PASSWORD') != null) {
+    keystoreFileVal = rootProject.file('signing.keystore')
+    keystorePassVal = System.getenv('KEYSTORE_PASSWORD')
+    keyAliasVal = System.getenv('KEY_ALIAS')
+    keyPassVal = System.getenv('KEY_PASSWORD')
+}
+// Local: keystore from properties file
+else if (keystorePropsFile.exists()) {
+    keystoreFileVal = keystoreProps['storeFile'] ? rootProject.file(keystoreProps['storeFile']) : null
+    keystorePassVal = keystoreProps['storePassword']
+    keyAliasVal = keystoreProps['keyAlias']
+    keyPassVal = keystoreProps['keyPassword']
 }
 
 android {
@@ -38,10 +46,10 @@ android {
     }
     signingConfigs {
         release {
-            storeFile keystoreFile
-            storePassword keystorePass
-            keyAlias keyAlias
-            keyPassword keyPass
+            storeFile keystoreFileVal
+            storePassword keystorePassVal
+            keyAlias keyAliasVal
+            keyPassword keyPassVal
         }
     }
     buildTypes {

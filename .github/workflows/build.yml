@@ -39,25 +39,34 @@ jobs:
           cd capacitor
           npx cap sync android
 
+      - name: Write keystore from secrets (if available)
+        id: keystore_check
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > capacitor/android/signing.keystore
+            echo "has_keystore=true" >> $GITHUB_OUTPUT
+            echo "Keystore written for release build"
+          else
+            echo "has_keystore=false" >> $GITHUB_OUTPUT
+            echo "No keystore secret — debug-only build"
+          fi
+
       - name: Build Debug APK
         run: |
           cd capacitor/android
           ./gradlew assembleDebug
 
-      - name: Build Signed Release AAB (for Google Play)
+      - name: Build Signed Release AAB
+        if: steps.keystore_check.outputs.has_keystore == 'true'
         env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "Keystore secrets found — building signed release AAB"
-            cd capacitor/android
-            ./gradlew bundleRelease
-          else
-            echo "No keystore secrets set — skipping release AAB build"
-          fi
+          cd capacitor/android
+          ./gradlew bundleRelease
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
