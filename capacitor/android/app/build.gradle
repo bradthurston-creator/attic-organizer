@@ -1,5 +1,25 @@
 apply plugin: 'com.android.application'
 
+// Load keystore config from properties file (local builds)
+def keystorePropsFile = rootProject.file('keystore.properties')
+def keystoreProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystoreProps.load(new FileInputStream(keystorePropsFile))
+}
+
+// Or from environment variables (CI builds - GitHub Actions)
+def keystoreFile = keystoreProps['storeFile'] ? rootProject.file(keystoreProps['storeFile']) : null
+def keystorePass = keystoreProps['storePassword'] ?: System.getenv('KEYSTORE_PASSWORD')
+def keyAlias = keystoreProps['keyAlias'] ?: System.getenv('KEY_ALIAS')
+def keyPass = keystoreProps['keyPassword'] ?: System.getenv('KEY_PASSWORD')
+
+// Decode keystore from env if provided (CI)
+if (System.getenv('KEYSTORE_BASE64') != null) {
+    def decodedBytes = System.getenv('KEYSTORE_BASE64').decodeBase64()
+    keystoreFile = rootProject.file('signing.keystore')
+    keystoreFile.withOutputStream { it.write(decodedBytes) }
+}
+
 android {
     namespace = "com.atticorganizer.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,10 +36,19 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            storeFile keystoreFile
+            storePassword keystorePass
+            keyAlias keyAlias
+            keyPassword keyPass
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
         }
     }
 }

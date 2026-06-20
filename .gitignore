@@ -13,3 +13,7 @@ dist/
 *.log
 .env
 .env.local
+*.keystore
+*.keystore.old
+keystore.properties
+signing.keystore
