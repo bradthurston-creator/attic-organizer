@@ -45,15 +45,19 @@ jobs:
           ./gradlew assembleDebug
 
       - name: Build Signed Release AAB (for Google Play)
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          cd capacitor/android
-          ./gradlew bundleRelease
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "Keystore secrets found — building signed release AAB"
+            cd capacitor/android
+            ./gradlew bundleRelease
+          else
+            echo "No keystore secrets set — skipping release AAB build"
+          fi
 
       - name: Upload Debug APK
         uses: actions/upload-artifact@v4
@@ -61,9 +65,9 @@ jobs:
           name: AtticOrganizer-Debug
           path: capacitor/android/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Upload Release AAB
-        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+      - name: Upload Release AAB (if built)
         uses: actions/upload-artifact@v4
         with:
           name: AtticOrganizer-Release
           path: capacitor/android/app/build/outputs/bundle/release/app-release.aab
+        continue-on-error: true
