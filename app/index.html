@@ -312,6 +312,7 @@ body{
         <button class="btn btn-sm btn-primary" id="updateTagBtn" style="flex:1;">📱 Update Tag</button>
         <button class="btn btn-sm btn-secondary" id="readNewScanBtn">📖 Scan Another</button>
       </div>
+      <button class="btn btn-sm btn-success" id="addToInvBtn" style="margin-top:8px;display:none;">+ Add to Inventory</button>
       <div id="updateResult" class="status-bar" style="margin-top:12px;display:none"></div>
     </div>
   </div>
@@ -915,8 +916,22 @@ function displayScannedBox(name, location, date, items) {
     renderScannedItems(listEl);
     lastScannedContent.appendChild(listEl);
   }
+  
+    // Determine if already in inventory
+    const alreadyInInventory = history.some(h => 
+      h.name === name && h.location === location
+    );
+  
+    if (addToInvBtn) {
+      addToInvBtn.style.display = alreadyInInventory ? 'none' : 'block';
+      addToInvBtn.onclick = () => {
+        addToHistory(name, location, date, items);
+        addToInvBtn.style.display = 'none';
+        showToast('Added to inventory!');
+      };
+    }
 
-  // Add new item row
+    // Add new item row
   const addRow = document.createElement('div');
   addRow.className = 'item-add-row';
   addRow.style.marginTop = '12px';
@@ -951,6 +966,7 @@ function displayScannedBox(name, location, date, items) {
       if (text && text.trim()) {
         scannedItems.push(text.trim());
         addInput.value = '';
+        addInput.focus();
         const listEl = document.getElementById('scannedItemsList');
         if (listEl) renderScannedItems(listEl);
         updateTagBtn.style.display = 'block';
@@ -1078,6 +1094,7 @@ readNewScanBtn.addEventListener('click', () => {
   readIcon.textContent = '📱';
   readIcon.className = 'nfc-icon';
   readLabel.textContent = 'Tap your phone to an Attic Organizer sticker';
+  if (addToInvBtn) addToInvBtn.style.display = 'none';
 });
 
 // === READ TAB EDIT ===
@@ -1089,6 +1106,7 @@ const readEditSaveBtn = $('readEditSaveBtn');
 const readEditCancelBtn = $('readEditCancelBtn');
 const readEditLocMic = $('readEditLocMic');
 const readEditNameMic = $('readEditNameMic');
+const addToInvBtn = $('addToInvBtn');
 
 readEditBtn.addEventListener('click', () => {
   readEditName.value = scannedBoxName;
