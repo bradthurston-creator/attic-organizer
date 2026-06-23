@@ -1,0 +1,339 @@
+<!doctype html>
+<html>
+<head><title>Crop Tool - Manual</title>
+<style>
+body{margin:0;background:#1e1e2e;color:#fff;font-family:system-ui,sans-serif;display:flex;flex-direction:column;height:100vh}
+.toolbar{background:#2a2a3e;padding:8px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0}
+.toolbar button{background:#D97732;color:#fff;border:none;border-radius:6px;padding:6px 16px;cursor:pointer;font-weight:600}
+.toolbar button.sec{background:#3a3a5a;color:#ccc}
+.toolbar button.danger{background:#c0392b}
+.toolbar button.active{background:#FFB74D;color:#1e1e2e}
+.toolbar label{color:#aaa;font-size:13px;display:flex;align-items:center;gap:4px}
+.toolbar .count{color:#8f8;font-size:13px}
+#info{font-size:12px;padding:3px 16px;background:#252538;color:#999;flex-shrink:0}
+.canvas-wrap{flex:1;overflow:auto;text-align:center;display:flex;align-items:flex-start;justify-content:center;padding:10px;position:relative}
+canvas{display:block;cursor:crosshair;max-width:1400px}
+#status{position:fixed;bottom:0;left:0;right:0;background:#2a2a3e;border-top:2px solid #D97732;padding:8px 16px;font-family:monospace;font-size:12px;color:#8f8;max-height:120px;overflow:auto;white-space:pre-wrap;z-index:10}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <input type="file" id="file-input" accept="image/png,image/jpeg">
+  <span style="color:#555">|</span>
+  <button id="draw-btn" class="active">Draw</button>
+  <button id="move-btn" class="sec">Move</button>
+  <button id="del-btn" class="danger sec">Delete Last</button>
+  <button id="clear-btn" class="danger sec">Clear All</button>
+  <span style="color:#555">|</span>
+  <button id="crop-btn">Crop All &amp; Save</button>
+  <span class="count" id="count">0 icons</span>
+</div>
+<div id="info">Load the image. Make sure Draw mode is on (orange). Click-drag to draw a rectangle around each icon. Switch to Move to adjust edges. Crop All when done.</div>
+<div class="canvas-wrap" id="canvas-wrap">
+  <canvas id="c"></canvas>
+</div>
+<div id="status">Waiting for image...</div>
+
+<script>
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+const info = document.getElementById('info');
+const status = document.getElementById('status');
+const fileInput = document.getElementById('file-input');
+const drawBtn = document.getElementById('draw-btn');
+const moveBtn = document.getElementById('move-btn');
+const delBtn = document.getElementById('del-btn');
+const clearBtn = document.getElementById('clear-btn');
+const cropBtn = document.getElementById('crop-btn');
+const count = document.getElementById('count');
+
+let img = null;
+let rects = []; // { x, y, w, h }
+let mode = 'draw'; // 'draw' or 'move'
+let drawing = false;
+let startX, startY;
+let currentRect = null;
+let dragHandle = null; // 'tl','tr','bl','br','move'
+let dragRectIdx = -1;
+let dragOffX, dragOffY;
+let nextLabel = 1;
+
+// Icon filenames in order
+const iconNames = [
+  'icon-tap-to-open',
+  'icon-inventory', 
+  'icon-instant-search',
+  'icon-nfc-labels',
+  'icon-voice-notes',
+  'icon-lists',
+  'icon-reminders',
+  'icon-categories',
+  'icon-stats',
+  'icon-settings',
+  'icon-backup',
+  'icon-security',
+  'icon-share',
+  'icon-help',
+  'app-icon-main'
+];
+
+fileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const i = new Image();
+    i.onload = () => {
+      img = i;
+      c.width = i.width;
+      c.height = i.height;
+      draw();
+      status.textContent = `Loaded ${i.width}×${i.height} — Draw boxes around each icon.`;
+      info.textContent = 'Draw mode: click-drag to make rectangles. Switch to Move to adjust.';
+    };
+    i.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+function draw() {
+  if (!img) return;
+  ctx.clearRect(0, 0, c.width, c.height);
+  ctx.drawImage(img, 0, 0);
+  
+  // Draw existing rects
+  rects.forEach((r, i) => {
+    ctx.strokeStyle = '#D97732';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(r.x, r.y, r.w, r.h);
+    
+    // Fill with slight tint
+    ctx.fillStyle = 'rgba(217,119,50,0.1)';
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+    
+    // Label
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.font = 'bold 16px monospace';
+    const label = (i+1).toString();
+    const tw = ctx.measureText(label).width;
+    ctx.fillRect(r.x + 4, r.y + 4, tw + 10, 24);
+    ctx.fillStyle = '#FFB74D';
+    ctx.fillText(label, r.x + 9, r.y + 22);
+    
+    // Draw resize handles
+    if (mode === 'move') {
+      ctx.fillStyle = '#fff';
+      const hs = 8;
+      [
+        [r.x, r.y], [r.x+r.w, r.y], 
+        [r.x, r.y+r.h], [r.x+r.w, r.y+r.h],
+        [r.x+r.w/2, r.y], [r.x+r.w/2, r.y+r.h],
+        [r.x, r.y+r.h/2], [r.x+r.w, r.y+r.h/2]
+      ].forEach(([hx, hy]) => {
+        ctx.fillRect(hx - hs/2, hy - hs/2, hs, hs);
+      });
+    }
+  });
+  
+  // Draw current rect being drawn
+  if (currentRect && mode === 'draw') {
+    ctx.strokeStyle = '#4FC3F7';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.strokeRect(currentRect.x, currentRect.y, currentRect.w, currentRect.h);
+    ctx.setLineDash([]);
+  }
+  
+  count.textContent = `${rects.length} icons`;
+}
+
+// Hit test for handles and rects
+function hitTest(mx, my) {
+  const hs = 10;
+  for (let i = rects.length - 1; i >= 0; i--) {
+    const r = rects[i];
+    // Check corners
+    const corners = [
+      { type: 'tl', x: r.x, y: r.y },
+      { type: 'tr', x: r.x+r.w, y: r.y },
+      { type: 'bl', x: r.x, y: r.y+r.h },
+      { type: 'br', x: r.x+r.w, y: r.y+r.h },
+    ];
+    for (const cn of corners) {
+      if (Math.abs(mx - cn.x) < hs && Math.abs(my - cn.y) < hs) {
+        return { rectIdx: i, handle: cn.type };
+      }
+    }
+    // Check inside rect for move
+    if (mx >= r.x && mx <= r.x+r.w && my >= r.y && my <= r.y+r.h) {
+      return { rectIdx: i, handle: 'move' };
+    }
+  }
+  return null;
+}
+
+// Mouse
+c.addEventListener('mousedown', e => {
+  if (!img) return;
+  const rect = c.getBoundingClientRect();
+  const sx = c.width / rect.width;
+  const mx = (e.clientX - rect.left) * sx;
+  const my = (e.clientY - rect.top) * sx;
+  
+  if (mode === 'draw') {
+    drawing = true;
+    startX = mx;
+    startY = my;
+    currentRect = { x: mx, y: my, w: 0, h: 0 };
+    c.style.cursor = 'crosshair';
+  } else if (mode === 'move') {
+    const hit = hitTest(mx, my);
+    if (hit) {
+      dragRectIdx = hit.rectIdx;
+      dragHandle = hit.handle;
+      dragOffX = mx;
+      dragOffY = my;
+      c.style.cursor = hit.handle === 'move' ? 'move' : (hit.handle.includes('l') ? 'ew-resize' : 'ns-resize');
+    }
+  }
+});
+
+c.addEventListener('mousemove', e => {
+  if (!img) return;
+  const rect = c.getBoundingClientRect();
+  const sx = c.width / rect.width;
+  const mx = (e.clientX - rect.left) * sx;
+  const my = (e.clientY - rect.top) * sx;
+  
+  status.textContent = `X: ${Math.round(mx)}  Y: ${Math.round(my)}  Mode: ${mode}  Rects: ${rects.length}`;
+  
+  if (drawing && currentRect) {
+    currentRect.w = mx - startX;
+    currentRect.h = my - startY;
+    // Normalize
+    if (currentRect.w < 0) { currentRect.x = mx; currentRect.w = -currentRect.w; }
+    if (currentRect.h < 0) { currentRect.y = my; currentRect.h = -currentRect.h; }
+    draw();
+  } else if (dragRectIdx >= 0 && mode === 'move') {
+    const r = rects[dragRectIdx];
+    const dx = mx - dragOffX;
+    const dy = my - dragOffY;
+    
+    switch(dragHandle) {
+      case 'move': r.x += dx; r.y += dy; break;
+      case 'tl': r.x += dx; r.y += dy; r.w -= dx; r.h -= dy; break;
+      case 'tr': r.y += dy; r.w += dx; r.h -= dy; break;
+      case 'bl': r.x += dx; r.w -= dx; r.h += dy; break;
+      case 'br': r.w += dx; r.h += dy; break;
+    }
+    // Normalize
+    if (r.w < 0) { r.x += r.w; r.w = -r.w; }
+    if (r.h < 0) { r.y += r.h; r.h = -r.h; }
+    
+    dragOffX = mx;
+    dragOffY = my;
+    draw();
+  } else if (mode === 'move') {
+    const hit = hitTest(mx, my);
+    c.style.cursor = hit ? (hit.handle === 'move' ? 'move' : 'pointer') : 'crosshair';
+    draw();
+    // Show crosshair
+    ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(mx, c.height);
+    ctx.strokeStyle = 'rgba(255,183,77,0.15)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, my); ctx.lineTo(c.width, my);
+    ctx.stroke();
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  if (drawing && currentRect) {
+    if (currentRect.w > 10 && currentRect.h > 10) {
+      rects.push({ ...currentRect });
+    }
+    currentRect = null;
+    drawing = false;
+    draw();
+  }
+  if (dragRectIdx >= 0) {
+    dragRectIdx = -1;
+    dragHandle = null;
+    c.style.cursor = 'crosshair';
+    draw();
+  }
+});
+
+// Mode switching
+drawBtn.addEventListener('click', () => {
+  mode = 'draw';
+  drawBtn.className = 'active';
+  moveBtn.className = 'sec';
+  c.style.cursor = 'crosshair';
+  info.textContent = 'Draw mode: click-drag to make rectangles.';
+});
+
+moveBtn.addEventListener('click', () => {
+  mode = 'move';
+  moveBtn.className = 'active';
+  drawBtn.className = 'sec';
+  c.style.cursor = 'crosshair';
+  info.textContent = 'Move mode: drag corners to resize, drag inside to move.';
+  draw();
+});
+
+delBtn.addEventListener('click', () => {
+  if (rects.length > 0) {
+    rects.pop();
+    draw();
+  }
+});
+
+clearBtn.addEventListener('click', () => {
+  rects = [];
+  draw();
+});
+
+// Crop all
+cropBtn.addEventListener('click', () => {
+  if (!img || rects.length === 0) {
+    status.textContent = 'No rectangles to crop!';
+    return;
+  }
+  
+  // Sort rects top-to-bottom, left-to-right for consistent ordering
+  const sorted = [...rects].sort((a, b) => {
+    const rowDiff = Math.round(a.y / 30) - Math.round(b.y / 30);
+    return rowDiff !== 0 ? rowDiff : a.x - b.x;
+  });
+  
+  let saved = 0;
+  sorted.forEach((r, i) => {
+    let name = iconNames[i] || `icon-${i+1}`;
+    if (r.w < 2 || r.h < 2) return;
+    
+    const cropCanvas = document.createElement('canvas');
+    cropCanvas.width = Math.round(r.w);
+    cropCanvas.height = Math.round(r.h);
+    const cropCtx = cropCanvas.getContext('2d');
+    cropCtx.drawImage(img, Math.round(r.x), Math.round(r.y), Math.round(r.w), Math.round(r.h), 0, 0, Math.round(r.w), Math.round(r.h));
+    
+    const link = document.createElement('a');
+    link.download = `${name}.png`;
+    link.href = cropCanvas.toDataURL('image/png');
+    link.click();
+    saved++;
+  });
+  
+  status.textContent = `Done — ${saved} files saved! Move them to app/icons/ to replace the old ones.`;
+  info.textContent = `${saved} icons cropped. Check your Downloads folder.`;
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === 'd' || e.key === 'D') drawBtn.click();
+  if (e.key === 'm' || e.key === 'M') moveBtn.click();
+  if (e.key === 'Delete' || e.key === 'Backspace') delBtn.click();
+  if (e.key === 'c' || e.key === 'C') cropBtn.click();
+});
+</script>
+</body>
+</html>

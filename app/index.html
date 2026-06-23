@@ -287,6 +287,12 @@ body{
         <button class="btn btn-sm btn-secondary" id="readEditBtn">✏️ Edit</button>
       </div>
       <div id="lastScannedContent"></div>
+      <!-- Add item row (static elements, wired once at init) -->
+      <div class="item-add-row" id="readAddItemRow" style="display:none;margin-top:12px;">
+        <input type="text" id="readAddItemInput" placeholder="Add an item..." autocomplete="off">
+        <button class="mic-btn" id="readAddMicBtn">🎤</button>
+        <button id="readAddItemBtn">+ Add</button>
+      </div>
       <!-- Edit inline -->
       <div id="readEditFields" style="display:none;margin-top:12px;">
         <div class="input-group">
@@ -446,14 +452,17 @@ const lastScannedHeader = $('lastScannedHeader');
 const updateTagBtn = $('updateTagBtn');
 const updateResult = $('updateResult');
 const readNewScanBtn = $('readNewScanBtn');
-const readEditNameBtn = $('readEditNameBtn');
-const editBtnRef = $('readEditBtn') || null;
+const editBtnRef = $('readEditBtn');
 const historyList = $('historyList');
 // historySearch removed
 const recentBoxesCard = $('recentBoxesCard');
 const recentWriteList = $('recentWriteList');
 const toast = $('toast');
 const nfcSupport = $('nfcSupport');
+const readAddItemInput = $('readAddItemInput');
+const readAddMicBtn = $('readAddMicBtn');
+const readAddItemBtn = $('readAddItemBtn');
+const readAddItemRow = $('readAddItemRow');
 
 boxDate.value = new Date().toISOString().split('T')[0];
 
@@ -637,6 +646,7 @@ voiceItemsBtn.addEventListener('click', () => {
     writeItemList.push(...newItems);
     renderWriteItems();
     validateWriteForm();
+    writeItemInput.focus();
     showToast(`+${newItems.length} item${newItems.length > 1 ? 's' : ''} added`);
   });
 });
@@ -654,6 +664,35 @@ function validateWriteForm() {
 boxName.addEventListener('input', validateWriteForm);
 boxDate.addEventListener('input', validateWriteForm);
 validateWriteForm();
+
+// === READ TAB ADD ITEM (static elements, wired once) ===
+readAddItemBtn.addEventListener('click', () => {
+  const val = readAddItemInput.value.trim();
+  if (!val) return;
+  scannedItems.push(val);
+  readAddItemInput.value = '';
+  const listEl = getOrCreateItemsList();
+  renderScannedItems(listEl);
+  updateTagBtn.style.display = 'block';
+  showToast('Item added. Tap "Update Tag" to save.');
+});
+readAddItemInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); readAddItemBtn.click(); }
+});
+readAddMicBtn.addEventListener('click', () => {
+  startListening(readAddMicBtn, (text) => {
+    showToast(`Heard: "${text ? text.trim() : '(empty)'}"`);
+    if (text && text.trim()) {
+      scannedItems.push(text.trim());
+      readAddItemInput.value = '';
+      readAddItemInput.focus();
+      const listEl = getOrCreateItemsList();
+      renderScannedItems(listEl);
+      updateTagBtn.style.display = 'block';
+      showToast(`+ "${text.trim()}" added!`);
+    }
+  });
+});
 
 // === NFC WRITE ===
 async function writeToTag() {
@@ -675,6 +714,8 @@ async function writeToTag() {
   try {
     const nfcPlugin = getNfcPlugin();
 
+    cleanupSpeech();
+
     if (nfcPlugin) {
       const nfc = nfcPlugin;
       const payload = buildTextPayload(content);
@@ -683,11 +724,12 @@ async function writeToTag() {
         throw new Error(`Message is too long (${payload.length} bytes). Remove some items.`);
       }
 
-
-      cleanupSpeech();
       const listenerHandles = [];
+      let writeDone = false;
 
       const handleTag = async (event) => {
+        if (writeDone) return;
+        writeDone = true;
         const tag = event?.tag;
         try {
           const messagePayload = Array.from(payload);
@@ -731,6 +773,7 @@ async function writeToTag() {
       writeResult.textContent = `✅ Written! Tap to read "${boxName.value.trim()}"`;
       setTimeout(() => {
         boxName.value = '';
+        boxLocation.value = '';
         boxDate.value = new Date().toISOString().split('T')[0];
         writeItemList = [];
         renderWriteItems();
@@ -783,7 +826,10 @@ async function startReading() {
 
     if (nfcPlugin) {
       const nfc = nfcPlugin;
-      nfc.addListener('ndefDiscovered', (event) => {
+      let readComplete = false;
+      const onTag = (event) => {
+        if (readComplete) return;
+        readComplete = true;
         const tag = event.tag;
         let text = '';
         if (tag.ndefMessage) {
@@ -794,19 +840,9 @@ async function startReading() {
           }
         }
         handleReadComplete(text || 'Tag read (empty)');
-      });
-      nfc.addListener('tagDiscovered', (event) => {
-        const tag = event.tag;
-        let text = '';
-        if (tag.ndefMessage) {
-          for (const record of tag.ndefMessage) {
-            if (record.tnf === 1 && record.type[0] === 0x54) {
-              text += decodeTextPayload(record.payload);
-            }
-          }
-        }
-        handleReadComplete(text || 'Tag read (empty)');
-      });
+      };
+      nfc.addListener('ndefDiscovered', onTag);
+      nfc.addListener('tagDiscovered', onTag);
 
       function handleReadComplete(text) {
         readIcon.textContent = '✅';
@@ -931,52 +967,20 @@ function displayScannedBox(name, location, date, items) {
       };
     }
 
-    // Add new item row
-  const addRow = document.createElement('div');
-  addRow.className = 'item-add-row';
-  addRow.style.marginTop = '12px';
-  const addInput = document.createElement('input');
-  addInput.type = 'text';
-  addInput.id = 'readAddItemInput';
-  addInput.placeholder = 'Add an item...';
-  addInput.autocomplete = 'off';
-  const addBtn = document.createElement('button');
-  addBtn.id = 'readAddItemBtn';
-  addBtn.textContent = '+ Add';
-  addBtn.addEventListener('click', () => {
-    const val = addInput.value.trim();
-    if (!val) return;
-    scannedItems.push(val);
-    addInput.value = '';
-    const listEl = document.getElementById('scannedItemsList');
-    if (listEl) renderScannedItems(listEl);
-    updateTagBtn.style.display = 'block';
-    showToast('Item added. Tap "Update Tag" to save.');
-  });
-  addInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); addBtn.click(); }
-  });
-  addRow.appendChild(addInput);
-  // Add mic button for voice input on Add
-  const readAddMicBtn = document.createElement('button');
-  readAddMicBtn.className = 'mic-btn';
-  readAddMicBtn.textContent = '🎤';
-  readAddMicBtn.addEventListener('click', () => {
-    startListening(readAddMicBtn, (text) => {
-      if (text && text.trim()) {
-        scannedItems.push(text.trim());
-        addInput.value = '';
-        addInput.focus();
-        const listEl = document.getElementById('scannedItemsList');
-        if (listEl) renderScannedItems(listEl);
-        updateTagBtn.style.display = 'block';
-        showToast('Item added. Tap "Update Tag" to save.');
-      }
-    });
-  });
-  addRow.appendChild(readAddMicBtn);
-  addRow.appendChild(addBtn);
-  lastScannedContent.appendChild(addRow);
+    // Add new item row (static elements, show on scan)
+  readAddItemRow.style.display = '';
+  readAddItemInput.value = '';
+  lastScannedContent.appendChild(readAddItemRow);
+}
+
+function getOrCreateItemsList() {
+  let el = document.getElementById('scannedItemsList');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'scannedItemsList';
+    lastScannedContent.appendChild(el);
+  }
+  return el;
 }
 
 function renderScannedItems(container) {

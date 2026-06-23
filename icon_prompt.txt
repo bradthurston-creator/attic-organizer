@@ -1,0 +1,11 @@
+Generate a clean, modern app icon for "Attic Organizer" — a mobile app that uses NFC tags to label boxes in storage.
+
+Design a simple flat vector icon on a dark slate blue (#37474F) square background (512x512).
+
+Main icon: The gable end of a house roof (A-frame triangle shape) in warm reddish-orange. The roof should have simple horizontal shingle lines. A small lit attic window (dormer) is centered in the roof face — cream/yellow glow.
+
+Above the roof peak, 3 curved NFC/WiFi signal arcs radiating upward, thin white lines getting fainter as they go outward.
+
+Overall style: Clean, minimal, flat vector. No text. No complex gradients. Looks like a real Play Store icon — professional and simple.
+
+The output should be a single 512x512 PNG with a transparent clip path or the slate background baked in.
