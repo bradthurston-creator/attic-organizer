@@ -10,5 +10,10 @@
     <false/>
     <key>signingStyle</key>
     <string>manual</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.atticorganizer.app</key>
+        <string>db8b5889-8747-4351-b5ae-4096e26acbb8</string>
+    </dict>
 </dict>
 </plist>
