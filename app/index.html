@@ -11,13 +11,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{height:100%}
+html{height:100%;overflow:hidden}
 body{
   font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   background:#f0edea;color:#1e1e24;
   -webkit-font-smoothing:antialiased;
-  line-height:1.5;min-height:100%;
-  padding-bottom:80px;
+  line-height:1.5;
+  height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;
 }
 .app-header{
   background:linear-gradient(135deg,#3a506b,#4a6585);
