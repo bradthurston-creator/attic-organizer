@@ -9,11 +9,9 @@
     <key>compileBitcode</key>
     <false/>
     <key>signingStyle</key>
-    <string>manual</string>
+    <string>automatic</string>
     <key>provisioningProfiles</key>
     <dict>
-        <key>com.atticorganizer.app</key>
-        <string>dca30f3f-9156-48b7-bc6a-b51137f3755e</string>
     </dict>
 </dict>
 </plist>
