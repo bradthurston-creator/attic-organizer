@@ -587,24 +587,28 @@ async function handleCapacitorSpeech(onResult) {
   if (!speechPlugin) return;
   try {
     const { available } = await speechPlugin.available();
-    if (!available) { voiceStatus.textContent = '❌ Speech not available'; voiceStatus.className = 'status-bar error'; return; }
+    if (!available) { voiceStatus.textContent = 'Speech not available'; voiceStatus.className = 'status-bar error'; return; }
     const granted = await ensureSpeechPermission();
-    if (!granted) { voiceStatus.textContent = '❌ Mic permission denied'; voiceStatus.className = 'status-bar error'; return; }
+    if (!granted) { voiceStatus.textContent = 'Mic permission denied'; voiceStatus.className = 'status-bar error'; return; }
     cleanupSpeech();
-    // Listen for errors only — the final result comes from start() itself
-    speechListenerHandles.push(await speechPlugin.addListener('error', () => { stopListening(); }));
-    // Block until recognition completes — start() returns the final result directly
     isListening = true;
+    // start() blocks until recognition completes — returns matches directly
     const result = await speechPlugin.start({ language: 'en-US', popup: false, addPunctuation: true, maxResults: 3 });
     const matches = result.matches;
-    if (matches && matches.length > 0) {
-      const transcript = matches[0];
-      voiceStatus.textContent = '✅ Got it!';
+    if (matches && matches.length > 0 && matches[0]) {
+      voiceStatus.textContent = 'Got it!';
       voiceStatus.className = 'status-bar success';
-      onResult(transcript.charAt(0).toUpperCase() + transcript.slice(1));
+      onResult(matches[0].charAt(0).toUpperCase() + matches[0].slice(1));
+    } else {
+      voiceStatus.textContent = 'No speech detected, try again';
+      voiceStatus.className = 'status-bar';
     }
     stopListening();
   } catch (err) {
+    const msg = err?.message || err?.toString() || 'Speech error';
+    console.warn('[Voice]', msg);
+    voiceStatus.textContent = msg.length > 50 ? 'Speech failed, try again' : msg;
+    voiceStatus.className = 'status-bar error';
     stopListening();
   }
 }
