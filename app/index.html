@@ -525,10 +525,18 @@ function escapeHtml(str) {
 }
 
 // === VOICE INPUT (3 separate mics) ===
+// iOS-reliable pattern: use partialResults streaming + silence-timer auto-stop.
+// On iOS, SFSpeechRecognizer in inline mode does NOT fire a final result on its
+// own, so we can't rely on start() resolving. Instead we capture the streaming
+// transcript and finalize on tap-again or after a silence timeout.
 let recognition = null;
 let isListening = false;
 let activeMicBtn = null;
+let activeOnResult = null;
 let speechListenerHandles = [];
+let lastTranscript = '';
+let silenceTimer = null;
+const SILENCE_MS = 1800; // auto-finalize after this much quiet
 
 const useCapacitorSpeech = hasCapacitorSpeech();
 const speechPlugin = useCapacitorSpeech ? getSpeechPlugin() : null;
@@ -536,33 +544,59 @@ const speechPlugin = useCapacitorSpeech ? getSpeechPlugin() : null;
 function startListening(micBtn, onResult) {
   if (isListening) { stopListening(); return; }
   activeMicBtn = micBtn;
+  activeOnResult = onResult;
+  lastTranscript = '';
   micBtn.classList.add('listening');
-  voiceStatus.textContent = '🎤 Listening...';
+  voiceStatus.textContent = 'Listening... tap mic again when done';
   voiceStatus.className = 'status-bar';
 
   if (useCapacitorSpeech) {
-    handleCapacitorSpeech(onResult);
+    startCapacitorSpeech();
   } else {
     handleWebSpeech(onResult);
   }
 }
 
+// Finalize the current capture: deliver whatever transcript we have, then clean up.
+function finalizeCapture() {
+  const transcript = (lastTranscript || '').trim();
+  const cb = activeOnResult;
+  if (transcript && cb) {
+    voiceStatus.textContent = 'Got it!';
+    voiceStatus.className = 'status-bar success';
+    cb(transcript.charAt(0).toUpperCase() + transcript.slice(1));
+  } else {
+    voiceStatus.textContent = 'No speech detected, try again';
+    voiceStatus.className = 'status-bar';
+  }
+  stopListening();
+}
+
 function stopListening() {
+  if (silenceTimer) { clearTimeout(silenceTimer); silenceTimer = null; }
   if (activeMicBtn) { activeMicBtn.classList.remove('listening'); activeMicBtn = null; }
   isListening = false;
+  activeOnResult = null;
   if (useCapacitorSpeech) {
     cleanupSpeech();
   } else if (recognition) {
     try { recognition.stop(); } catch(e) {}
   }
-  voiceStatus.textContent = 'Hold 🎤 to speak, or type';
-  voiceStatus.className = 'status-bar';
+  if (voiceStatus.className === 'status-bar' && voiceStatus.textContent.startsWith('Listening')) {
+    voiceStatus.textContent = 'Tap mic to speak, or type';
+  }
+}
+
+function bumpSilenceTimer() {
+  if (silenceTimer) clearTimeout(silenceTimer);
+  silenceTimer = setTimeout(() => { if (isListening) finalizeCapture(); }, SILENCE_MS);
 }
 
 function handleWebSpeech(onResult) {
   if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-    voiceStatus.textContent = '❌ Voice not available in this browser';
+    voiceStatus.textContent = 'Voice not available in this browser';
     voiceStatus.className = 'status-bar error';
+    stopListening();
     return;
   }
   const WebkitSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -571,43 +605,44 @@ function handleWebSpeech(onResult) {
   recognition.interimResults = false;
   recognition.lang = 'en-US';
   recognition.onresult = (e) => {
-    const transcript = e.results[0][0].transcript;
-    voiceStatus.textContent = '✅ Got it!';
-    voiceStatus.className = 'status-bar success';
-    onResult(transcript);
-    stopListening();
+    lastTranscript = e.results[0][0].transcript;
+    finalizeCapture();
   };
   recognition.onerror = () => { stopListening(); };
-  recognition.onend = () => { if (activeMicBtn) stopListening(); };
+  recognition.onend = () => { if (activeMicBtn) finalizeCapture(); };
   isListening = true;
   recognition.start();
 }
 
-async function handleCapacitorSpeech(onResult) {
-  if (!speechPlugin) return;
+async function startCapacitorSpeech() {
+  if (!speechPlugin) { stopListening(); return; }
   try {
     const { available } = await speechPlugin.available();
-    if (!available) { voiceStatus.textContent = 'Speech not available'; voiceStatus.className = 'status-bar error'; return; }
+    if (!available) { voiceStatus.textContent = 'Speech not available'; voiceStatus.className = 'status-bar error'; stopListening(); return; }
     const granted = await ensureSpeechPermission();
-    if (!granted) { voiceStatus.textContent = 'Mic permission denied'; voiceStatus.className = 'status-bar error'; return; }
-    cleanupSpeech();
+    if (!granted) { voiceStatus.textContent = 'Mic permission denied — enable it in Settings'; voiceStatus.className = 'status-bar error'; stopListening(); return; }
+
+    // Wire up streaming listeners BEFORE start so we never miss a partial.
+    speechListenerHandles.push(await speechPlugin.addListener('partialResults', (event) => {
+      const t = event && event.matches && event.matches[0];
+      if (t) { lastTranscript = t; bumpSilenceTimer(); }
+    }));
+    speechListenerHandles.push(await speechPlugin.addListener('error', (event) => {
+      const code = (event && (event.message || event.code)) || 'Speech error';
+      console.warn('[Voice]', code);
+      // If we already heard something, keep it; otherwise surface the error.
+      if (lastTranscript) { finalizeCapture(); }
+      else { voiceStatus.textContent = 'Speech failed, try again'; voiceStatus.className = 'status-bar error'; stopListening(); }
+    }));
+
     isListening = true;
-    // start() blocks until recognition completes — returns matches directly
-    const result = await speechPlugin.start({ language: 'en-US', popup: false, addPunctuation: true, maxResults: 3 });
-    const matches = result.matches;
-    if (matches && matches.length > 0 && matches[0]) {
-      voiceStatus.textContent = 'Got it!';
-      voiceStatus.className = 'status-bar success';
-      onResult(matches[0].charAt(0).toUpperCase() + matches[0].slice(1));
-    } else {
-      voiceStatus.textContent = 'No speech detected, try again';
-      voiceStatus.className = 'status-bar';
-    }
-    stopListening();
+    // partialResults:true → start() resolves immediately; transcript arrives via listener.
+    await speechPlugin.start({ language: 'en-US', popup: false, partialResults: true, addPunctuation: true, maxResults: 3 });
+    bumpSilenceTimer();
   } catch (err) {
-    const msg = err?.message || err?.toString() || 'Speech error';
-    console.warn('[Voice]', msg);
-    voiceStatus.textContent = msg.length > 50 ? 'Speech failed, try again' : msg;
+    const msg = (err && (err.message || err.toString())) || 'Speech error';
+    console.warn('[Voice] start failed:', msg);
+    voiceStatus.textContent = 'Speech failed, try again';
     voiceStatus.className = 'status-bar error';
     stopListening();
   }
@@ -622,10 +657,9 @@ async function ensureSpeechPermission() {
 }
 
 function cleanupSpeech() {
-  isListening = false;
-  speechListenerHandles.forEach(h => h.remove());
+  speechListenerHandles.forEach(h => { try { h.remove(); } catch(e) {} });
   speechListenerHandles = [];
-  speechPlugin?.stop?.().catch(() => {});
+  try { speechPlugin?.stop?.().catch(() => {}); } catch(e) {}
 }
 
 voiceLocBtn.addEventListener('click', () => {
