@@ -383,6 +383,15 @@ const hasNativeNfc = () => !!getNfcPlugin();
 const hasNfcSupport = () => hasNativeNfc() || nfcInBrowser;
 const getSpeechPlugin = () => getCapacitorPlugin('SpeechRecognition');
 const hasCapacitorSpeech = () => !!getSpeechPlugin();
+
+// Immediate diagnostic: capture plugin state at script parse time
+(function() {
+  if (window.Capacitor) {
+    nfcLog('[diag@parse] Capacitor present, plugins: ' + Object.keys(window.Capacitor.Plugins || {}).join(', '));
+  } else {
+    nfcLog('[diag@parse] Capacitor NOT present yet');
+  }
+})();
 let nfcReading = false;
 let isWriteScanning = false;
 let scannedBoxName = '';
@@ -1354,6 +1363,16 @@ $('clearBtn').addEventListener('click', () => {
 function initNfcCheck() {
   if (!hasNfcSupport()) {
     nfcSupport.style.display = 'block';
+  }
+  // Diagnostic: dump plugin registration state to debug log
+  if (window.Capacitor) {
+    var keys = Object.keys(window.Capacitor.Plugins || {});
+    nfcLog('[diag] Plugins registered: ' + keys.join(', ') + (keys.length === 0 ? '(none)' : ''));
+    nfcLog('[diag] CapacitorNfc found: ' + (!!window.Capacitor.Plugins['CapacitorNfc']));
+    nfcLog('[diag] Platform: ' + (window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : '?'));
+  } else {
+    nfcLog('[diag] window.Capacitor is UNDEFINED — not running in native app');
+    nfcLog('[diag] NDEFReader in window: ' + nfcInBrowser);
   }
 }
 
