@@ -64,6 +64,20 @@ workflows:
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/"*.mobileprovision \
              "$HOME/Library/MobileDevice/Provisioning Profiles/"
+          # Extract the provisioning profile UUID and update exportOptions.plist
+          PROFILE_PATH="$HOME/Library/MobileDevice/Provisioning Profiles"
+          for f in "$PROFILE_PATH"/*.mobileprovision; do
+            if [ -f "$f" ]; then
+              UUID=$(security cms -D -i "$f" 2>/dev/null | plutil -extract UUID raw -o - - 2>/dev/null)
+              if [ -n "$UUID" ]; then
+                echo "Found provisioning profile: $UUID"
+                /usr/libexec/PlistBuddy -c "Set :provisioningProfiles:$APP_ID $UUID" capacitor/ios/exportOptions.plist 2>/dev/null || \
+                /usr/libexec/PlistBuddy -c "Add :provisioningProfiles dict" -c "Add :provisioningProfiles:$APP_ID string $UUID" capacitor/ios/exportOptions.plist
+                break
+              fi
+            fi
+          done
+          echo "Updated exportOptions.plist with UUID"
 
       - name: Build iOS app
         script: |
