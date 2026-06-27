@@ -836,7 +836,7 @@ async function writeToTag() {
       listenerHandles.push(await nfc.addListener('nfcStateChange', (s) => nfcLog('⚠️ nfcStateChange: ' + JSON.stringify(s))));
 
       nfc.startScanning({
-        iosSessionType: 'tag',
+        iosSessionType: 'ndef',
         invalidateAfterFirstRead: false,
         androidReaderModeFlags: 15,
         alertMessage: 'Hold the top edge of the iPhone near the Attic Organizer tag. Keep it there until the app says it is written.'
@@ -957,7 +957,7 @@ async function startReading() {
       }
 
       await nfc.startScanning({
-        iosSessionType: 'tag',
+        iosSessionType: 'ndef',
         invalidateAfterFirstRead: true,
         androidReaderModeFlags: 15,
         alertMessage: 'Hold the top edge of the iPhone near the Attic Organizer tag.'
@@ -1165,7 +1165,7 @@ async function updateTag() {
       listenerHandles.push(await nfc.addListener('tagDiscovered', handleTag));
       listenerHandles.push(await nfc.addListener('ndefDiscovered', handleTag));
       await nfc.startScanning({
-        iosSessionType: 'tag',
+        iosSessionType: 'ndef',
         invalidateAfterFirstRead: false,
         androidReaderModeFlags: 15,
         alertMessage: 'Hold the top edge of the iPhone near the Attic Organizer tag. Keep it there until the app says it is updated.'
