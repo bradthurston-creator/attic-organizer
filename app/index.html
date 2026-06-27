@@ -811,7 +811,7 @@ async function writeToTag() {
       listenerHandles.push(await nfc.addListener('tagDiscovered', handleTag));
       listenerHandles.push(await nfc.addListener('ndefDiscovered', handleTag));
 
-      await nfc.startScanning({ iosSessionType: 'tag', androidReaderModeFlags: 15 });
+      await nfc.startScanning({ iosSessionType: 'tag', invalidateAfterFirstRead: false, androidReaderModeFlags: 15 });
     } else if (hasNfcSupport()) {
       const ndef = new NDEFReader();
       await ndef.write({ records: [{ recordType: "text", data: content }] });
@@ -895,8 +895,20 @@ async function startReading() {
         }
         handleReadComplete(text || 'Tag read (empty)');
       };
-      nfc.addListener('ndefDiscovered', onTag);
-      nfc.addListener('tagDiscovered', onTag);
+      const readListenerHandles = [];
+      readListenerHandles.push(await nfc.addListener('ndefDiscovered', onTag));
+      readListenerHandles.push(await nfc.addListener('tagDiscovered', onTag));
+      readListenerHandles.push(await nfc.addListener('nfcStateChange', (state) => {
+        if (!readComplete) {
+          readResult.className = 'status-bar error';
+          readResult.textContent = '❌ NFC session ended before a tag was read. Hold the tag at the top edge of the iPhone and try again.';
+          readBtn.disabled = false;
+          readBtn.textContent = '📖 Start Reading';
+          readIcon.textContent = '📱';
+          readIcon.className = 'nfc-icon';
+          readLabel.textContent = 'Tap to try again';
+        }
+      }));
 
       function handleReadComplete(text) {
         readIcon.textContent = '✅';
@@ -915,6 +927,7 @@ async function startReading() {
         readBtn.disabled = false;
         readBtn.textContent = '📖 Read Another';
         setTimeout(() => nfc.stopScanning(), 500);
+        readListenerHandles.forEach(h => { try { h.remove(); } catch(e) {} });
       }
 
       await nfc.startScanning({ iosSessionType: 'tag', invalidateAfterFirstRead: true, androidReaderModeFlags: 15 });
@@ -1119,7 +1132,7 @@ async function updateTag() {
 
       listenerHandles.push(await nfc.addListener('tagDiscovered', handleTag));
       listenerHandles.push(await nfc.addListener('ndefDiscovered', handleTag));
-      await nfc.startScanning({ iosSessionType: 'tag', androidReaderModeFlags: 15 });
+      await nfc.startScanning({ iosSessionType: 'tag', invalidateAfterFirstRead: false, androidReaderModeFlags: 15 });
     } else if (hasNfcSupport()) {
       const ndef = new NDEFReader();
       await ndef.write({ records: [{ recordType: "text", data: content }] });
