@@ -353,10 +353,24 @@ body{
 </div>
 
 <div class="toast" id="toast"></div>
+<div id="nfcDebugLog" style="position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow-y:auto;background:rgba(0,0,0,0.9);color:#0f0;font:11px/1.4 monospace;padding:8px;z-index:9999;display:none;white-space:pre-wrap;"></div>
 
 <script>
 // === STATE ===
 let history = JSON.parse(localStorage.getItem('atticOrganizerHistory') || '[]');
+
+// === NFC DEBUG LOG (visible on-screen) ===
+function nfcLog(msg) {
+  const el = document.getElementById('nfcDebugLog');
+  if (!el) return;
+  el.style.display = 'block';
+  const t = new Date().toLocaleTimeString();
+  el.textContent += `[${t}] ${msg}\n`;
+  el.scrollTop = el.scrollHeight;
+}
+window.addEventListener('error', (e) => nfcLog('JS ERROR: ' + e.message));
+window.addEventListener('unhandledrejection', (e) => nfcLog('PROMISE REJECT: ' + (e.reason?.message || e.reason)));
+
 const nfcInBrowser = 'NDEFReader' in window;
 const getCapacitorPlugin = (name) => {
   if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins[name]) {
@@ -765,6 +779,9 @@ async function writeToTag() {
 
     if (nfcPlugin) {
       const nfc = nfcPlugin;
+      nfcLog('Plugin found. Platform: ' + (window.Capacitor?.getPlatform?.() || '?'));
+      try { const v = await nfc.getPluginVersion(); nfcLog('Plugin version: ' + JSON.stringify(v)); } catch(e) { nfcLog('getPluginVersion err: ' + e.message); }
+      try { const s = await nfc.isSupported(); nfcLog('isSupported: ' + JSON.stringify(s)); } catch(e) { nfcLog('isSupported err: ' + e.message); }
       const payload = buildTextPayload(content);
 
       if (payload.length > MAX_NFC_BYTES) {
@@ -775,17 +792,18 @@ async function writeToTag() {
       let writeDone = false;
 
       const handleTag = async (event) => {
-        writeResult.textContent = '📡 Tag detected, processing...';
+        nfcLog('🔔 EVENT FIRED: ' + JSON.stringify(event).slice(0,200));
         if (writeDone) return;
         writeDone = true;
         const tag = event?.tag;
-        writeResult.textContent = '📡 Tag connected (type: ' + (event.type || '?') + ', ndef: ' + (tag?.ndefMessage ? 'yes' : 'no') + ')';
         try {
           const messagePayload = Array.from(payload);
+          nfcLog('Calling nfc.write(), payload ' + messagePayload.length + ' bytes...');
           await nfc.write({
             records: [{ tnf: 1, type: [0x54], id: [], payload: messagePayload, languageCode: NFC_LANGUAGE_CODE, encoding: 'utf-8' }],
             allowFormat: true
           });
+          nfcLog('✅ nfc.write() resolved');
           addToHistory(name, loc, boxDate.value, writeItemList);
           writeResult.className = 'status-bar success';
           writeResult.textContent = `✅ Written! Tap to read "${name}"`;
@@ -798,6 +816,7 @@ async function writeToTag() {
             validateWriteForm();
           }, 2000);
         } catch (error) {
+          nfcLog('❌ nfc.write() FAILED: ' + (error.message || error));
           writeResult.className = 'status-bar error';
           writeResult.textContent = `❌ Write failed: ${error.message || 'Unknown error'}`;
         } finally {
@@ -810,16 +829,19 @@ async function writeToTag() {
         }
       };
 
+      nfcLog('Registering listeners + startScanning (write)...');
       listenerHandles.push(await nfc.addListener('nfcEvent', handleTag));
       listenerHandles.push(await nfc.addListener('tagDiscovered', handleTag));
       listenerHandles.push(await nfc.addListener('ndefDiscovered', handleTag));
+      listenerHandles.push(await nfc.addListener('nfcStateChange', (s) => nfcLog('⚠️ nfcStateChange: ' + JSON.stringify(s))));
 
-      await nfc.startScanning({
+      nfc.startScanning({
         iosSessionType: 'tag',
         invalidateAfterFirstRead: false,
         androidReaderModeFlags: 15,
         alertMessage: 'Hold the top edge of the iPhone near the Attic Organizer tag. Keep it there until the app says it is written.'
-      });
+      }).then(() => nfcLog('✅ startScanning resolved (session active)'))
+        .catch((e) => nfcLog('❌ startScanning REJECTED: ' + (e.message || e) + ' code=' + (e.code||'?')));
     } else if (hasNfcSupport()) {
       const ndef = new NDEFReader();
       await ndef.write({ records: [{ recordType: "text", data: content }] });
