@@ -852,10 +852,17 @@ writeBtn.addEventListener('click', writeToTag);
 
 // === NFC READ ===
 async function startReading() {
+  // Diagnostic — show what Capacitor can see at click time
+  const diagParts = [];
+  diagParts.push('Capacitor: ' + (window.Capacitor ? 'yes' : 'NO'));
+  diagParts.push('Plugins: ' + (window.Capacitor && window.Capacitor.Plugins ? Object.keys(window.Capacitor.Plugins).join(',') : 'NONE'));
+  diagParts.push('NFC: ' + (getNfcPlugin() ? 'found' : 'NULL'));
+  console.log('[NFC-DIAG]', diagParts.join(' | '));
+
   if (!hasNfcSupport()) {
     readResult.style.display = 'block';
     readResult.className = 'status-bar error';
-    readResult.textContent = '❌ NFC not available in this browser. Use an Android device.';
+    readResult.textContent = '❌ NFC not available. Plugins: ' + (window.Capacitor && window.Capacitor.Plugins ? Object.keys(window.Capacitor.Plugins).slice(0,3).join(',') : 'none');
     return;
   }
   try {
