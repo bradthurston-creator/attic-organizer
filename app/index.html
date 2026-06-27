@@ -775,9 +775,11 @@ async function writeToTag() {
       let writeDone = false;
 
       const handleTag = async (event) => {
+        writeResult.textContent = '📡 Tag detected, processing...';
         if (writeDone) return;
         writeDone = true;
         const tag = event?.tag;
+        writeResult.textContent = '📡 Tag connected (type: ' + (event.type || '?') + ', ndef: ' + (tag?.ndefMessage ? 'yes' : 'no') + ')';
         try {
           const messagePayload = Array.from(payload);
           await nfc.write({
@@ -881,8 +883,10 @@ async function startReading() {
       const nfc = nfcPlugin;
       let readComplete = false;
       const onTag = (event) => {
+        readResult.textContent = '📡 Tag detected...';
         if (readComplete) return;
         readComplete = true;
+        readResult.textContent = '📡 Processing ' + (event.type || '?') + ' tag...';
         const tag = event.tag;
         let text = '';
         if (tag.ndefMessage) {
