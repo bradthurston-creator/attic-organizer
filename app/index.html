@@ -358,7 +358,12 @@ body{
 // === STATE ===
 let history = JSON.parse(localStorage.getItem('atticOrganizerHistory') || '[]');
 const nfcInBrowser = 'NDEFReader' in window;
-const getCapacitorPlugin = (name) => (window.Capacitor && window.Capacitor.Plugins ? window.Capacitor.Plugins[name] : null);
+const getCapacitorPlugin = (name) => {
+  if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins[name]) {
+    return window.Capacitor.Plugins[name];
+  }
+  return null;
+};
 const getNfcPlugin = () => getCapacitorPlugin('CapacitorNfc');
 const hasNativeNfc = () => !!getNfcPlugin();
 const hasNfcSupport = () => hasNativeNfc() || nfcInBrowser;
@@ -1287,8 +1292,22 @@ $('clearBtn').addEventListener('click', () => {
 });
 
 // === NFC SUPPORT CHECK ===
-if (!hasNfcSupport()) {
-  nfcSupport.style.display = 'block';
+// Defer check until Capacitor bridge is ready — on iOS the plugins
+// may not be registered yet at parse time, causing false negatives.
+function initNfcCheck() {
+  if (!hasNfcSupport()) {
+    nfcSupport.style.display = 'block';
+  }
+}
+
+// Capacitor fires 'deviceready' once the bridge is up.
+// Fall back to DOMContentLoaded if not in a Capacitor context.
+if (window.Capacitor) {
+  document.addEventListener('deviceready', initNfcCheck, false);
+  // Belt-and-suspenders: also run after a short delay in case deviceready already fired
+  setTimeout(initNfcCheck, 500);
+} else {
+  initNfcCheck();
 }
 
 // === TOAST ===
