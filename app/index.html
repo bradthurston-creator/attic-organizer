@@ -808,10 +808,16 @@ async function writeToTag() {
         }
       };
 
+      listenerHandles.push(await nfc.addListener('nfcEvent', handleTag));
       listenerHandles.push(await nfc.addListener('tagDiscovered', handleTag));
       listenerHandles.push(await nfc.addListener('ndefDiscovered', handleTag));
 
-      await nfc.startScanning({ iosSessionType: 'tag', invalidateAfterFirstRead: false, androidReaderModeFlags: 15 });
+      await nfc.startScanning({
+        iosSessionType: 'tag',
+        invalidateAfterFirstRead: false,
+        androidReaderModeFlags: 15,
+        alertMessage: 'Hold the top edge of the iPhone near the Attic Organizer tag. Keep it there until the app says it is written.'
+      });
     } else if (hasNfcSupport()) {
       const ndef = new NDEFReader();
       await ndef.write({ records: [{ recordType: "text", data: content }] });
@@ -852,17 +858,10 @@ writeBtn.addEventListener('click', writeToTag);
 
 // === NFC READ ===
 async function startReading() {
-  // Diagnostic — show what Capacitor can see at click time
-  const diagParts = [];
-  diagParts.push('Capacitor: ' + (window.Capacitor ? 'yes' : 'NO'));
-  diagParts.push('Plugins: ' + (window.Capacitor && window.Capacitor.Plugins ? Object.keys(window.Capacitor.Plugins).join(',') : 'NONE'));
-  diagParts.push('NFC: ' + (getNfcPlugin() ? 'found' : 'NULL'));
-  console.log('[NFC-DIAG]', diagParts.join(' | '));
-
   if (!hasNfcSupport()) {
     readResult.style.display = 'block';
     readResult.className = 'status-bar error';
-    readResult.textContent = '❌ NFC not available. Plugins: ' + (window.Capacitor && window.Capacitor.Plugins ? Object.keys(window.Capacitor.Plugins).slice(0,3).join(',') : 'none');
+    readResult.textContent = '❌ NFC not available on this device.';
     return;
   }
   try {
@@ -896,6 +895,7 @@ async function startReading() {
         handleReadComplete(text || 'Tag read (empty)');
       };
       const readListenerHandles = [];
+      readListenerHandles.push(await nfc.addListener('nfcEvent', onTag));
       readListenerHandles.push(await nfc.addListener('ndefDiscovered', onTag));
       readListenerHandles.push(await nfc.addListener('tagDiscovered', onTag));
       readListenerHandles.push(await nfc.addListener('nfcStateChange', (state) => {
@@ -930,7 +930,12 @@ async function startReading() {
         readListenerHandles.forEach(h => { try { h.remove(); } catch(e) {} });
       }
 
-      await nfc.startScanning({ iosSessionType: 'tag', invalidateAfterFirstRead: true, androidReaderModeFlags: 15 });
+      await nfc.startScanning({
+        iosSessionType: 'tag',
+        invalidateAfterFirstRead: true,
+        androidReaderModeFlags: 15,
+        alertMessage: 'Hold the top edge of the iPhone near the Attic Organizer tag.'
+      });
     } else {
               const ndef = new NDEFReader();
               await ndef.scan();
@@ -1130,9 +1135,15 @@ async function updateTag() {
         }
       };
 
+      listenerHandles.push(await nfc.addListener('nfcEvent', handleTag));
       listenerHandles.push(await nfc.addListener('tagDiscovered', handleTag));
       listenerHandles.push(await nfc.addListener('ndefDiscovered', handleTag));
-      await nfc.startScanning({ iosSessionType: 'tag', invalidateAfterFirstRead: false, androidReaderModeFlags: 15 });
+      await nfc.startScanning({
+        iosSessionType: 'tag',
+        invalidateAfterFirstRead: false,
+        androidReaderModeFlags: 15,
+        alertMessage: 'Hold the top edge of the iPhone near the Attic Organizer tag. Keep it there until the app says it is updated.'
+      });
     } else if (hasNfcSupport()) {
       const ndef = new NDEFReader();
       await ndef.write({ records: [{ recordType: "text", data: content }] });
