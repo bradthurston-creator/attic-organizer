@@ -68,6 +68,7 @@ workflows:
       - name: Build iOS app
         script: |
           cd capacitor/ios/App
+          xcodebuild -resolvePackageDependencies
           xcodebuild -project App.xcodeproj \
             -scheme App \
             -sdk iphoneos \

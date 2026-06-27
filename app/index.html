@@ -536,7 +536,9 @@ let activeOnResult = null;
 let speechListenerHandles = [];
 let lastTranscript = '';
 let silenceTimer = null;
-const SILENCE_MS = 1800; // auto-finalize after this much quiet
+let hasReceivedSpeech = false;
+const SILENCE_MS = 1200; // auto-finalize after this much quiet once speech is flowing
+const INITIAL_TIMEOUT_MS = 4000; // first timeout is longer to let engine warm up
 
 const useCapacitorSpeech = hasCapacitorSpeech();
 const speechPlugin = useCapacitorSpeech ? getSpeechPlugin() : null;
@@ -546,6 +548,7 @@ function startListening(micBtn, onResult) {
   activeMicBtn = micBtn;
   activeOnResult = onResult;
   lastTranscript = '';
+  hasReceivedSpeech = false;
   micBtn.classList.add('listening');
   voiceStatus.textContent = 'Listening... tap mic again when done';
   voiceStatus.className = 'status-bar';
@@ -589,7 +592,8 @@ function stopListening() {
 
 function bumpSilenceTimer() {
   if (silenceTimer) clearTimeout(silenceTimer);
-  silenceTimer = setTimeout(() => { if (isListening) finalizeCapture(); }, SILENCE_MS);
+  const ms = hasReceivedSpeech ? SILENCE_MS : INITIAL_TIMEOUT_MS;
+  silenceTimer = setTimeout(() => { if (isListening) finalizeCapture(); }, ms);
 }
 
 function handleWebSpeech(onResult) {
@@ -625,7 +629,7 @@ async function startCapacitorSpeech() {
     // Wire up streaming listeners BEFORE start so we never miss a partial.
     speechListenerHandles.push(await speechPlugin.addListener('partialResults', (event) => {
       const t = event && event.matches && event.matches[0];
-      if (t) { lastTranscript = t; bumpSilenceTimer(); }
+      if (t) { lastTranscript = t; hasReceivedSpeech = true; bumpSilenceTimer(); }
     }));
     speechListenerHandles.push(await speechPlugin.addListener('error', (event) => {
       const code = (event && (event.message || event.code)) || 'Speech error';
