@@ -211,6 +211,7 @@ body{
     <button class="tab" data-tab="read" role="tab">📖 Read</button>
     <button class="tab" data-tab="history" role="tab">📋 Inventory</button>
     <button class="tab" data-tab="search" role="tab">🔍 Search</button>
+    <button class="tab" data-tab="debug" role="tab" style="flex:0.4;font-size:13px;">🐞 Log</button>
   </div>
 
   <!-- WRITE PANEL -->
@@ -350,23 +351,86 @@ body{
       </div>
     </div>
   </div>
+
+  <!-- DEBUG PANEL -->
+  <div class="panel" id="panel-debug">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h2 style="margin:0;">🐞 NFC Debug Log</h2>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm btn-secondary" onclick="copyDebugLog()" style="width:auto;">📋 Copy</button>
+          <button class="btn btn-sm btn-secondary" onclick="clearDebugLog()" style="width:auto;">🗑️ Clear</button>
+        </div>
+      </div>
+      <div id="nfcDebugLog" style="background:#111;color:#0f0;font:11px/1.4 monospace;padding:12px;border-radius:10px;max-height:55vh;overflow-y:auto;white-space:pre-wrap;user-select:text;-webkit-user-select:text;">
+        <span style="color:#666;">Tap a tab above or start NFC to see logs here.</span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
-<div id="nfcDebugLog" onclick="this.style.display='none'" style="position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow-y:auto;background:rgba(0,0,0,0.9);color:#0f0;font:11px/1.4 monospace;padding:8px;z-index:9999;display:none;white-space:pre-wrap;"></div>
 
 <script>
 // === STATE ===
 let history = JSON.parse(localStorage.getItem('atticOrganizerHistory') || '[]');
+let nfcTimeoutId = null;
+const NFC_TIMEOUT_MS = 60000; // 60 seconds
 
-// === NFC DEBUG LOG (visible on-screen) ===
+function startNfcTimeout(msg) {
+  clearNfcTimeout();
+  nfcTimeoutId = setTimeout(() => {
+    nfcLog('⏱️ NFC timeout reached — stopping scan');
+    const nfc = getNfcPlugin();
+    if (nfc) {
+      nfc.stopScanning().catch(() => {});
+    }
+    // Reset any scanning UI state
+    if (typeof isWriteScanning !== 'undefined') isWriteScanning = false;
+    if (typeof nfcReading !== 'undefined') nfcReading = false;
+    writeBtn.disabled = false;
+    writeBtn.textContent = '📱 Write to Tag';
+    readBtn.disabled = false;
+    readBtn.textContent = '📖 Start Reading';
+    showToast(msg || '⏱️ NFC timed out — tap to try again');
+  }, NFC_TIMEOUT_MS);
+}
+function clearNfcTimeout() {
+  if (nfcTimeoutId) { clearTimeout(nfcTimeoutId); nfcTimeoutId = null; }
+}
+
+// === NFC DEBUG LOG (visible in debug tab) ===
+var _nfcLogInited = false;
 function nfcLog(msg) {
   const el = document.getElementById('nfcDebugLog');
   if (!el) return;
-  el.style.display = 'block';
+  if (!_nfcLogInited) { el.textContent = ''; _nfcLogInited = true; }
   const t = new Date().toLocaleTimeString();
   el.textContent += `[${t}] ${msg}\n`;
   el.scrollTop = el.scrollHeight;
+}
+function copyDebugLog() {
+  const el = document.getElementById('nfcDebugLog');
+  if (!el || !el.textContent) return;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(el.textContent);
+    showToast('📋 Debug log copied');
+  } else {
+    // Fallback for older WebKit
+    const sel = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    document.execCommand('copy');
+    sel.removeAllRanges();
+    showToast('📋 Debug log copied');
+  }
+}
+function clearDebugLog() {
+  const el = document.getElementById('nfcDebugLog');
+  if (el) { el.textContent = ''; _nfcLogInited = false; }
+  nfcLog('Log cleared');
 }
 window.addEventListener('error', (e) => nfcLog('JS ERROR: ' + e.message));
 window.addEventListener('unhandledrejection', (e) => nfcLog('PROMISE REJECT: ' + (e.reason?.message || e.reason)));
@@ -804,6 +868,7 @@ async function writeToTag() {
         nfcLog('🔔 EVENT FIRED: ' + JSON.stringify(event).slice(0,200));
         if (writeDone) return;
         writeDone = true;
+        clearNfcTimeout();
         const tag = event?.tag;
         try {
           const messagePayload = Array.from(payload);
@@ -829,6 +894,7 @@ async function writeToTag() {
           writeResult.className = 'status-bar error';
           writeResult.textContent = `❌ Write failed: ${error.message || 'Unknown error'}`;
         } finally {
+          clearNfcTimeout();
           await new Promise(r => setTimeout(r, 1500));
           await nfc.stopScanning();
           writeBtn.disabled = false;
@@ -849,7 +915,10 @@ async function writeToTag() {
         invalidateAfterFirstRead: false,
         androidReaderModeFlags: 15,
         alertMessage: 'Hold the top edge of the iPhone near the Attic Organizer tag. Keep it there until the app says it is written.'
-      }).then(() => nfcLog('✅ startScanning resolved (session active)'))
+      }).then(() => {
+        nfcLog('✅ startScanning resolved (session active)');
+        startNfcTimeout('⏱️ Write timed out — no tag detected');
+      })
         .catch((e) => nfcLog('❌ startScanning REJECTED: ' + (e.message || e) + ' code=' + (e.code||'?')));
     } else if (hasNfcSupport()) {
       const ndef = new NDEFReader();
@@ -935,6 +1004,7 @@ async function startReading() {
       readListenerHandles.push(await nfc.addListener('tagDiscovered', onTag));
       readListenerHandles.push(await nfc.addListener('nfcStateChange', (state) => {
         if (!readComplete) {
+          clearNfcTimeout();
           readResult.className = 'status-bar error';
           readResult.textContent = '❌ NFC session ended before a tag was read. Hold the tag at the top edge of the iPhone and try again.';
           readBtn.disabled = false;
@@ -949,6 +1019,7 @@ async function startReading() {
         readIcon.textContent = '✅';
         readIcon.className = 'nfc-icon';
         readLabel.textContent = 'Tag read!';
+        clearNfcTimeout();
         readResult.className = 'status-bar success';
         readResult.textContent = 'Tag read successfully';
 
@@ -971,6 +1042,8 @@ async function startReading() {
         androidReaderModeFlags: 15,
         alertMessage: 'Hold the top edge of the iPhone near the Attic Organizer tag.'
       });
+      nfcLog('✅ Read scanning active');
+      startNfcTimeout('⏱️ Read timed out — no tag detected');
     } else {
               const ndef = new NDEFReader();
               await ndef.scan();
@@ -1009,6 +1082,7 @@ async function startReading() {
       });
     }
   } catch(err) {
+    clearNfcTimeout();
     readResult.style.display = 'block';
     readResult.className = 'status-bar error';
     readResult.textContent = `❌ ${err.message || 'NFC scan failed'}`;
@@ -1147,6 +1221,7 @@ async function updateTag() {
 
       const listenerHandles = [];
       const handleTag = async (event) => {
+        clearNfcTimeout();
         const tag = event?.tag;
         try {
           const messagePayload = Array.from(payload);
@@ -1179,6 +1254,8 @@ async function updateTag() {
         androidReaderModeFlags: 15,
         alertMessage: 'Hold the top edge of the iPhone near the Attic Organizer tag. Keep it there until the app says it is updated.'
       });
+      nfcLog('✅ Update scanning active');
+      startNfcTimeout('⏱️ Update timed out — no tag detected');
     } else if (hasNfcSupport()) {
       const ndef = new NDEFReader();
       await ndef.write({ records: [{ recordType: "text", data: content }] });
@@ -1190,6 +1267,7 @@ async function updateTag() {
       updateTagBtn.textContent = '📱 Update Tag';
     }
   } catch(err) {
+    clearNfcTimeout();
     updateResult.className = 'status-bar error';
     updateResult.textContent = `❌ ${err.message || 'Update failed'}`;
     isUpdatingTag = false;
@@ -1382,6 +1460,19 @@ if (window.Capacitor) {
   document.addEventListener('deviceready', initNfcCheck, false);
   // Belt-and-suspenders: also run after a short delay in case deviceready already fired
   setTimeout(initNfcCheck, 500);
+  // Stop NFC scanning when app goes to background
+  document.addEventListener('pause', function() {
+    nfcLog('📱 App paused — stopping NFC');
+    clearNfcTimeout();
+    const nfc = getNfcPlugin();
+    if (nfc) { nfc.stopScanning().catch(function(){}); }
+    isWriteScanning = false;
+    nfcReading = false;
+    writeBtn.disabled = false;
+    writeBtn.textContent = '📱 Write to Tag';
+    readBtn.disabled = false;
+    readBtn.textContent = '📖 Start Reading';
+  }, false);
 } else {
   initNfcCheck();
 }
