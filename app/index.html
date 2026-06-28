@@ -34,9 +34,9 @@ body{
 }
 .container{max-width:480px;margin:0 auto;padding:16px}
 
-.tabs{display:flex;gap:0;margin-bottom:20px;border-radius:12px;overflow:hidden;background:#e0dbd6;}
+.tabs{display:flex;gap:0;margin-bottom:20px;border-radius:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;background:#e0dbd6;}
 .tab{
-  flex:1;padding:12px;text-align:center;font-weight:500;font-size:14px;
+  flex:0 0 auto;padding:12px 10px;text-align:center;font-weight:500;font-size:13px;
   cursor:pointer;border:none;background:transparent;color:#6b5e52;transition:all 0.2s;
   white-space:nowrap;
 }
@@ -211,7 +211,7 @@ body{
     <button class="tab" data-tab="read" role="tab">📖 Read</button>
     <button class="tab" data-tab="history" role="tab">📋 Inventory</button>
     <button class="tab" data-tab="search" role="tab">🔍 Search</button>
-    <button class="tab" data-tab="debug" role="tab" style="flex:0.4;font-size:13px;">🐞 Log</button>
+    <button class="tab" data-tab="debug" role="tab">🐞 Log</button>
   </div>
 
   <!-- WRITE PANEL -->
@@ -911,7 +911,7 @@ async function writeToTag() {
       listenerHandles.push(await nfc.addListener('nfcStateChange', (s) => nfcLog('⚠️ nfcStateChange: ' + JSON.stringify(s))));
 
       nfc.startScanning({
-        iosSessionType: 'ndef',
+        iosSessionType: 'tag',
         invalidateAfterFirstRead: false,
         androidReaderModeFlags: 15,
         alertMessage: 'Hold the top edge of the iPhone near the Attic Organizer tag. Keep it there until the app says it is written.'
@@ -1037,7 +1037,7 @@ async function startReading() {
       }
 
       await nfc.startScanning({
-        iosSessionType: 'ndef',
+        iosSessionType: 'tag',
         invalidateAfterFirstRead: true,
         androidReaderModeFlags: 15,
         alertMessage: 'Hold the top edge of the iPhone near the Attic Organizer tag.'
