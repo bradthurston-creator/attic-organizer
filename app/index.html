@@ -211,7 +211,6 @@ body{
     <button class="tab" data-tab="read" role="tab">📖 Read</button>
     <button class="tab" data-tab="history" role="tab">📋 Inventory</button>
     <button class="tab" data-tab="search" role="tab">🔍 Search</button>
-    <button class="tab" data-tab="debug" role="tab">🐞 Log</button>
   </div>
 
   <!-- WRITE PANEL -->
@@ -252,7 +251,6 @@ body{
         <div class="item-list" id="writeItems"></div>
         <div class="item-add-row">
           <input type="text" id="writeItemInput" placeholder="e.g. 3 strings of lights" autocomplete="off">
-          <button id="writeItemAddBtn">+ Add</button>
           <button class="voice-btn-sm" id="voiceItemsBtn" title="Speak items">🎤</button>
         </div>
       </div>
@@ -292,7 +290,6 @@ body{
       <div class="item-add-row" id="readAddItemRow" style="display:none;margin-top:12px;">
         <input type="text" id="readAddItemInput" placeholder="Add an item..." autocomplete="off">
         <button class="mic-btn" id="readAddMicBtn">🎤</button>
-        <button id="readAddItemBtn">+ Add</button>
       </div>
       <!-- Edit inline -->
       <div id="readEditFields" style="display:none;margin-top:12px;">
@@ -352,21 +349,6 @@ body{
     </div>
   </div>
 
-  <!-- DEBUG PANEL -->
-  <div class="panel" id="panel-debug">
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <h2 style="margin:0;">🐞 NFC Debug Log</h2>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-sm btn-secondary" onclick="copyDebugLog()" style="width:auto;">📋 Copy</button>
-          <button class="btn btn-sm btn-secondary" onclick="clearDebugLog()" style="width:auto;">🗑️ Clear</button>
-        </div>
-      </div>
-      <div id="nfcDebugLog" style="background:#111;color:#0f0;font:11px/1.4 monospace;padding:12px;border-radius:10px;max-height:55vh;overflow-y:auto;white-space:pre-wrap;user-select:text;-webkit-user-select:text;">
-        <span style="color:#666;">Tap a tab above or start NFC to see logs here.</span>
-      </div>
-    </div>
-  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -385,7 +367,6 @@ function startNfcTimeout(msg) {
     if (nfc) {
       nfc.stopScanning().catch(() => {});
     }
-    // Reset any scanning UI state
     if (typeof isWriteScanning !== 'undefined') isWriteScanning = false;
     if (typeof nfcReading !== 'undefined') nfcReading = false;
     writeBtn.disabled = false;
@@ -399,7 +380,7 @@ function clearNfcTimeout() {
   if (nfcTimeoutId) { clearTimeout(nfcTimeoutId); nfcTimeoutId = null; }
 }
 
-// === NFC DEBUG LOG (visible in debug tab) ===
+// === NFC DEBUG LOG ===
 var _nfcLogInited = false;
 function nfcLog(msg) {
   const el = document.getElementById('nfcDebugLog');
@@ -416,7 +397,6 @@ function copyDebugLog() {
     navigator.clipboard.writeText(el.textContent);
     showToast('📋 Debug log copied');
   } else {
-    // Fallback for older WebKit
     const sel = window.getSelection();
     const range = document.createRange();
     range.selectNodeContents(el);
@@ -436,6 +416,7 @@ window.addEventListener('error', (e) => nfcLog('JS ERROR: ' + e.message));
 window.addEventListener('unhandledrejection', (e) => nfcLog('PROMISE REJECT: ' + (e.reason?.message || e.reason)));
 
 const nfcInBrowser = 'NDEFReader' in window;
+
 const getCapacitorPlugin = (name) => {
   if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins[name]) {
     return window.Capacitor.Plugins[name];
@@ -532,7 +513,6 @@ const writeBtn = $('writeBtn');
 const writeResult = $('writeResult');
 const writeItems = $('writeItems');
 const writeItemInput = $('writeItemInput');
-const writeItemAddBtn = $('writeItemAddBtn');
 const readBtn = $('readBtn');
 const readScanCard = $('readScanCard');
 const readResult = $('readResult');
@@ -553,7 +533,6 @@ const toast = $('toast');
 const nfcSupport = $('nfcSupport');
 const readAddItemInput = $('readAddItemInput');
 const readAddMicBtn = $('readAddMicBtn');
-const readAddItemBtn = $('readAddItemBtn');
 const readAddItemRow = $('readAddItemRow');
 
 boxDate.value = new Date().toISOString().split('T')[0];
@@ -594,19 +573,15 @@ function renderWriteItems() {
   });
 }
 
-writeItemAddBtn.addEventListener('click', () => {
-  const val = writeItemInput.value.trim();
-  if (!val) return;
-  writeItemList.push(val);
-  writeItemInput.value = '';
-  renderWriteItems();
-  validateWriteForm();
-});
-
 writeItemInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     e.preventDefault();
-    writeItemAddBtn.click();
+    const val = writeItemInput.value.trim();
+    if (!val) return;
+    writeItemList.push(val);
+    writeItemInput.value = '';
+    renderWriteItems();
+    validateWriteForm();
   }
 });
 
@@ -629,7 +604,7 @@ let speechListenerHandles = [];
 let lastTranscript = '';
 let silenceTimer = null;
 let hasReceivedSpeech = false;
-const SILENCE_MS = 1200; // auto-finalize after this much quiet once speech is flowing
+const SILENCE_MS = 600; // auto-finalize after this much quiet once speech is flowing
 const INITIAL_TIMEOUT_MS = 4000; // first timeout is longer to let engine warm up
 
 const useCapacitorSpeech = hasCapacitorSpeech();
@@ -800,7 +775,7 @@ boxDate.addEventListener('input', validateWriteForm);
 validateWriteForm();
 
 // === READ TAB ADD ITEM (static elements, wired once) ===
-readAddItemBtn.addEventListener('click', () => {
+function addReadItem() {
   const val = readAddItemInput.value.trim();
   if (!val) return;
   scannedItems.push(val);
@@ -809,9 +784,9 @@ readAddItemBtn.addEventListener('click', () => {
   renderScannedItems(listEl);
   updateTagBtn.style.display = 'block';
   showToast('Item added. Tap "Update Tag" to save.');
-});
+}
 readAddItemInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') { e.preventDefault(); readAddItemBtn.click(); }
+  if (e.key === 'Enter') { e.preventDefault(); addReadItem(); }
 });
 readAddMicBtn.addEventListener('click', () => {
   startListening(readAddMicBtn, (text) => {
@@ -1364,8 +1339,8 @@ function renderHistory() {
   }
 
   historyList.innerHTML = filtered.map(h => `
-    <div class="history-item">
-      <div class="hi-content">
+    <div class="history-item" data-id="${h.id}" style="cursor:pointer;">
+      <div class="hi-content" onclick="showInventoryDetail(${h.id})">
         <div class="hi-name">${escapeHtml(h.name)}</div>
         <div class="hi-date">📅 ${escapeHtml(h.date)}${h.location ? ` &middot; 📍 ${escapeHtml(h.location)}` : ''}</div>
         <span class="hi-tag">${escapeHtml(h.timestamp)}</span>
@@ -1375,13 +1350,39 @@ function renderHistory() {
   `).join('');
 
   historyList.querySelectorAll('.hi-del').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       const id = parseInt(btn.dataset.id);
       if (confirm('Delete this box and all its contents from inventory?')) {
         deleteHistoryItem(id);
       }
     });
   });
+}
+
+function showInventoryDetail(id) {
+  const h = history.find(item => item.id === id);
+  if (!h) return;
+
+  historyList.innerHTML = `
+    <div style="margin-bottom:12px;">
+      <button class="btn btn-sm btn-outline" onclick="renderHistory()" style="background:transparent;border:1px solid #3a506b;color:#3a506b;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer;">← Back to inventory</button>
+    </div>
+    <div class="card" style="margin-bottom:0;">
+      <div class="read-header">📦 ${escapeHtml(h.name)}</div>
+      ${h.location ? '<div style="font-size:14px;color:#6b5e52;margin-bottom:4px;">📍 ' + escapeHtml(h.location) + '</div>' : ''}
+      <div class="read-date">📅 ${escapeHtml(h.date)}</div>
+      <div style="font-size:12px;color:#9a8e82;margin-bottom:12px;">${escapeHtml(h.timestamp)}</div>
+      ${(h.items || []).length > 0 ? `
+        <div style="border-top:1px solid #eee;padding-top:12px;">
+          <div style="font-size:14px;font-weight:600;color:#3a506b;margin-bottom:8px;">Contents</div>
+          ${h.items.map(function(item) {
+            return '<div class="read-item"><span class="ri-text">📝 ' + escapeHtml(item) + '</span></div>';
+          }).join('')}
+        </div>
+      ` : '<div style="margin-top:12px;color:#9a8e82;font-size:13px;">No items listed</div>'}
+      <button class="btn btn-danger" onclick="if(confirm('Delete this box and all its contents from inventory?')){deleteHistoryItem(${h.id});}" style="margin-top:16px;width:100%;">🗑️ Delete this box</button>
+    </div>`;
 }
 
 function deleteHistoryItem(id) {
